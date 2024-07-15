@@ -22,6 +22,7 @@
 #define VIEW_DISPATCHER_DEBUG 1
 
 typedef struct {
+    int32_t unused;
 } NfcTeslaAppModel;
 
 typedef struct {
@@ -35,6 +36,7 @@ typedef struct {
 NfcTeslaApp* app;
 TextBox* textBoxDebug;
 Popup* popup;
+FuriMessageQueue* event_queue;
 
 static void dispatch_view(void* contextd, uint32_t index) {
     NfcTeslaApp* context = (NfcTeslaApp*)contextd;
@@ -78,13 +80,16 @@ static void nfcTeslaApp_free(NfcTeslaApp* instance) {
 
 static bool eventCallback(void* context) {
     UNUSED(context);
+    FURI_LOG_D(TAG, "Event callback");
     return false;
 }
 
-bool inputCallback(InputEvent* event, void* context) {
+bool input_callback(InputEvent* event, void* context) {
     UNUSED(context);
-    UNUSED(event);
-    FURI_LOG_D(TAG, "Back button pressend on sending view");
+    FURI_LOG_D(TAG, "Input callback");
+    if(event->key == InputKeyBack) {
+        view_dispatcher_switch_to_view(app->view_dispatcher, VIEW_DISPATCHER_MENU);
+    }
     return true;
 }
 
@@ -92,25 +97,27 @@ int32_t nfctesla_app() {
     furi_log_set_level(FuriLogLevelDebug);
     FURI_LOG_D(TAG, "APP STARTED");
 
+    event_queue = furi_message_queue_alloc(8, sizeof(InputEvent));
+
     app = nfcTeslaApp_alloc();
     Menu* mainMenu = menu_alloc();
-    menu_add_item(mainMenu, "Test 1", &I_125_10, VIEW_DISPATCHER_DEBUG, dispatch_view, app);
-    menu_add_item(mainMenu, "Test 2", &I_125_10, VIEW_DISPATCHER_DEBUG, dispatch_view, app);
-    menu_add_item(mainMenu, "Test 3", &I_125_10, VIEW_DISPATCHER_DEBUG, dispatch_view, app);
+    menu_add_item(mainMenu, "Test 1", &I_125_10px, VIEW_DISPATCHER_DEBUG, dispatch_view, app);
+    menu_add_item(mainMenu, "Test 2", &I_125_10px, VIEW_DISPATCHER_DEBUG, dispatch_view, app);
+    menu_add_item(mainMenu, "Test 3", &I_125_10px, VIEW_DISPATCHER_DEBUG, dispatch_view, app);
 
     // Debug
     TextBox* textBoxDebug = text_box_alloc();
     text_box_set_text(textBoxDebug, "Debug...");
     text_box_set_font(textBoxDebug, TextBoxFontText);
-    View* textBoxView = text_box_get_view(textBoxDebug);
-    view_set_input_callback(textBoxView, inputCallback);
+    View* textBoxDebugView = text_box_get_view(textBoxDebug);
+    view_set_input_callback(textBoxDebugView, input_callback);
 
     // Popup
     popup = popup_alloc();
     popup_disable_timeout(popup);
 
     view_dispatcher_add_view(app->view_dispatcher, VIEW_DISPATCHER_MENU, menu_get_view(mainMenu));
-    view_dispatcher_add_view(app->view_dispatcher, VIEW_DISPATCHER_DEBUG, textBoxView);
+    view_dispatcher_add_view(app->view_dispatcher, VIEW_DISPATCHER_DEBUG, textBoxDebugView);
     view_dispatcher_switch_to_view(app->view_dispatcher, VIEW_DISPATCHER_MENU);
     view_dispatcher_set_navigation_event_callback(app->view_dispatcher, eventCallback);
 
@@ -120,6 +127,7 @@ int32_t nfctesla_app() {
     menu_free(mainMenu);
     text_box_free(textBoxDebug);
     popup_free(popup);
+    furi_message_queue_free(event_queue);
 
     return 0;
 }
