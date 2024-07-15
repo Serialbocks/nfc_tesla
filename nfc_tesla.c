@@ -1,0 +1,125 @@
+#include <furi.h>
+#include <furi_hal.h>
+
+#include <gui/gui.h>
+#include <gui/elements.h>
+#include <gui/view_dispatcher.h>
+#include <gui/modules/menu.h>
+#include <gui/modules/popup.h>
+#include <gui/modules/text_box.h>
+#include <dialogs/dialogs.h>
+
+#include <storage/storage.h>
+#include <stream/stream.h>
+#include <stream/buffered_file_stream.h>
+#include <toolbox/stream/file_stream.h>
+
+#include "icons.h"
+
+#define TAG "NFC_TESLA_main"
+
+#define VIEW_DISPATCHER_MENU 0
+#define VIEW_DISPATCHER_DEBUG 1
+
+typedef struct {
+} NfcTeslaAppModel;
+
+typedef struct {
+    NfcTeslaAppModel* model;
+
+    ViewDispatcher* view_dispatcher;
+    Gui* gui;
+    Storage* storage;
+} NfcTeslaApp;
+
+NfcTeslaApp* app;
+TextBox* textBoxDebug;
+Popup* popup;
+
+static void dispatch_view(void* contextd, uint32_t index) {
+    NfcTeslaApp* context = (NfcTeslaApp*)contextd;
+
+    if(index == VIEW_DISPATCHER_DEBUG) {
+        view_dispatcher_switch_to_view(context->view_dispatcher, VIEW_DISPATCHER_DEBUG);
+    }
+}
+
+static NfcTeslaApp* nfcTeslaApp_alloc() {
+    FURI_LOG_D(TAG, "alloc");
+    NfcTeslaApp* instance = malloc(sizeof(NfcTeslaApp));
+
+    instance->model = malloc(sizeof(NfcTeslaAppModel));
+    memset(instance->model, 0x0, sizeof(NfcTeslaAppModel));
+
+    instance->view_dispatcher = view_dispatcher_alloc();
+
+    instance->gui = furi_record_open(RECORD_GUI);
+    view_dispatcher_enable_queue(instance->view_dispatcher);
+    view_dispatcher_attach_to_gui(
+        instance->view_dispatcher, instance->gui, ViewDispatcherTypeFullscreen);
+
+    instance->storage = furi_record_open(RECORD_STORAGE);
+
+    return instance;
+}
+
+static void nfcTeslaApp_free(NfcTeslaApp* instance) {
+    furi_record_close(RECORD_STORAGE);
+
+    view_dispatcher_remove_view(app->view_dispatcher, VIEW_DISPATCHER_MENU);
+    view_dispatcher_remove_view(app->view_dispatcher, VIEW_DISPATCHER_DEBUG);
+
+    view_dispatcher_free(instance->view_dispatcher);
+    furi_record_close(RECORD_GUI);
+
+    free(instance->model);
+    free(instance);
+}
+
+static bool eventCallback(void* context) {
+    UNUSED(context);
+    return false;
+}
+
+bool inputCallback(InputEvent* event, void* context) {
+    UNUSED(context);
+    UNUSED(event);
+    FURI_LOG_D(TAG, "Back button pressend on sending view");
+    return true;
+}
+
+int32_t nfctesla_app() {
+    furi_log_set_level(FuriLogLevelDebug);
+    FURI_LOG_D(TAG, "APP STARTED");
+
+    app = nfcTeslaApp_alloc();
+    Menu* mainMenu = menu_alloc();
+    menu_add_item(mainMenu, "Test 1", &I_125_10, VIEW_DISPATCHER_DEBUG, dispatch_view, app);
+    menu_add_item(mainMenu, "Test 2", &I_125_10, VIEW_DISPATCHER_DEBUG, dispatch_view, app);
+    menu_add_item(mainMenu, "Test 3", &I_125_10, VIEW_DISPATCHER_DEBUG, dispatch_view, app);
+
+    // Debug
+    TextBox* textBoxDebug = text_box_alloc();
+    text_box_set_text(textBoxDebug, "Debug...");
+    text_box_set_font(textBoxDebug, TextBoxFontText);
+    View* textBoxView = text_box_get_view(textBoxDebug);
+    view_set_input_callback(textBoxView, inputCallback);
+
+    // Popup
+    popup = popup_alloc();
+    popup_disable_timeout(popup);
+
+    view_dispatcher_add_view(app->view_dispatcher, VIEW_DISPATCHER_MENU, menu_get_view(mainMenu));
+    view_dispatcher_add_view(app->view_dispatcher, VIEW_DISPATCHER_DEBUG, textBoxView);
+    view_dispatcher_switch_to_view(app->view_dispatcher, VIEW_DISPATCHER_MENU);
+    view_dispatcher_set_navigation_event_callback(app->view_dispatcher, eventCallback);
+
+    view_dispatcher_run(app->view_dispatcher);
+
+    nfcTeslaApp_free(app);
+    menu_free(mainMenu);
+    text_box_free(textBoxDebug);
+    popup_free(popup);
+
+    return 0;
+}
