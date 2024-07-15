@@ -37,6 +37,7 @@ typedef struct {
 
 NfcTeslaApp* app;
 TextBox* textBoxDebug;
+FuriString* textBoxDebugText;
 Popup* popup;
 FuriMessageQueue* event_queue;
 
@@ -55,6 +56,14 @@ int32_t debug_view_thread(void* contextd) {
             return 0;
         }
     }
+}
+
+void debug_printf(const char format[], ...) {
+    va_list args;
+    va_start(args, format);
+    furi_string_vprintf(textBoxDebugText, format, args);
+    text_box_set_text(textBoxDebug, furi_string_get_cstr(textBoxDebugText));
+    va_end(args);
 }
 
 static void dispatch_view(void* contextd, uint32_t index) {
@@ -130,8 +139,11 @@ int32_t nfctesla_app() {
     menu_add_item(mainMenu, "Test 3", &I_125_10px, VIEW_DISPATCHER_DEBUG, dispatch_view, app);
 
     // Debug
-    TextBox* textBoxDebug = text_box_alloc();
-    text_box_set_text(textBoxDebug, "Debug...");
+    textBoxDebug = text_box_alloc();
+    textBoxDebugText = furi_string_alloc();
+    uint32_t test = 1;
+    debug_printf("Debug %lu", test);
+
     text_box_set_font(textBoxDebug, TextBoxFontText);
     View* textBoxDebugView = text_box_get_view(textBoxDebug);
     view_set_input_callback(textBoxDebugView, input_callback);
@@ -150,6 +162,7 @@ int32_t nfctesla_app() {
     nfcTeslaApp_free(app);
     menu_free(mainMenu);
     text_box_free(textBoxDebug);
+    furi_string_free(textBoxDebugText);
     popup_free(popup);
     furi_message_queue_free(event_queue);
 
