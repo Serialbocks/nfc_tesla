@@ -31,6 +31,8 @@ typedef struct {
     ViewDispatcher* view_dispatcher;
     Gui* gui;
     Storage* storage;
+
+    FuriThread* debug_view_thread;
 } NfcTeslaApp;
 
 NfcTeslaApp* app;
@@ -38,11 +40,29 @@ TextBox* textBoxDebug;
 Popup* popup;
 FuriMessageQueue* event_queue;
 
+int32_t debug_view_thread(void* contextd) {
+    NfcTeslaApp* context = contextd;
+    InputEvent input_event;
+    FuriStatus furi_status;
+
+    while(true) {
+        furi_status = furi_message_queue_get(event_queue, &input_event, 100);
+        if(furi_status != FuriStatusOk || input_event.type != InputTypePress) {
+            continue;
+        }
+        if(input_event.key == InputKeyBack) {
+            view_dispatcher_switch_to_view(context->view_dispatcher, VIEW_DISPATCHER_MENU);
+            return 0;
+        }
+    }
+}
+
 static void dispatch_view(void* contextd, uint32_t index) {
     NfcTeslaApp* context = (NfcTeslaApp*)contextd;
 
     if(index == VIEW_DISPATCHER_DEBUG) {
         view_dispatcher_switch_to_view(context->view_dispatcher, VIEW_DISPATCHER_DEBUG);
+        furi_thread_start(context->debug_view_thread);
     }
 }
 
@@ -62,6 +82,9 @@ static NfcTeslaApp* nfcTeslaApp_alloc() {
 
     instance->storage = furi_record_open(RECORD_STORAGE);
 
+    instance->debug_view_thread =
+        furi_thread_alloc_ex("debug_view_thread", 512, debug_view_thread, instance);
+
     return instance;
 }
 
@@ -73,6 +96,9 @@ static void nfcTeslaApp_free(NfcTeslaApp* instance) {
 
     view_dispatcher_free(instance->view_dispatcher);
     furi_record_close(RECORD_GUI);
+
+    furi_thread_join(instance->debug_view_thread);
+    furi_thread_free(instance->debug_view_thread);
 
     free(instance->model);
     free(instance);
@@ -87,9 +113,7 @@ static bool eventCallback(void* context) {
 bool input_callback(InputEvent* event, void* context) {
     UNUSED(context);
     FURI_LOG_D(TAG, "Input callback");
-    if(event->key == InputKeyBack) {
-        view_dispatcher_switch_to_view(app->view_dispatcher, VIEW_DISPATCHER_MENU);
-    }
+    furi_message_queue_put(event_queue, event, FuriWaitForever);
     return true;
 }
 
