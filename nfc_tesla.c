@@ -3,7 +3,6 @@
 
 #include "icons.h"
 #include "nfc_tesla.h"
-#include "helpers/nfc_tkc_scanner.h"
 
 #define TAG "NFC_TESLA_main"
 
@@ -46,15 +45,20 @@ int32_t debug_view_thread(void* contextd) {
     return 0;
 }
 
+void scanner_callback(NfcTkcScannerEvent event, void* context) {
+    UNUSED(event);
+    UNUSED(context);
+}
+
 int32_t read_view_thread(void* contextd) {
     NfcTeslaApp* context = contextd;
     FURI_LOG_D(TAG, "read_view_thread");
     view_dispatcher_switch_to_view(context->view_dispatcher, VIEW_DISPATCHER_DEBUG);
     debug_printf(context, "Testing NFC Read...");
-
+    nfc_tkc_scanner_start(context->scanner, scanner_callback, context);
     furi_delay_ms(2000);
     debug_printf(context, "Done! Stopping...");
-
+    nfc_tkc_scanner_stop(context->scanner);
     furi_delay_ms(2000);
     view_dispatcher_switch_to_view(context->view_dispatcher, VIEW_DISPATCHER_MENU);
     return 0;
@@ -80,6 +84,7 @@ static NfcTeslaApp* nfcTeslaApp_alloc() {
     instance->nfc = nfc_alloc();
     instance->source_dev = nfc_device_alloc();
     instance->target_dev = nfc_device_alloc();
+    instance->scanner = nfc_tkc_scanner_alloc(instance->nfc);
 
     instance->view_dispatcher = view_dispatcher_alloc();
 
@@ -113,6 +118,7 @@ static void nfcTeslaApp_free(NfcTeslaApp* instance) {
     furi_thread_join(instance->read_view_thread);
     furi_thread_free(instance->read_view_thread);
 
+    nfc_tkc_scanner_free(instance->scanner);
     nfc_free(instance->nfc);
     nfc_device_free(instance->source_dev);
     nfc_device_free(instance->target_dev);

@@ -18,6 +18,8 @@
 #include <stream/buffered_file_stream.h>
 #include <toolbox/stream/file_stream.h>
 
+#include "helpers/nfc_tkc_scanner.h"
+
 typedef struct {
     TextBox* textBoxDebug;
     FuriString* textBoxDebugText;
@@ -38,4 +40,6 @@ typedef struct {
     NfcDevice* target_dev;
     NfcPoller* poller;
     NfcListener* listener;
+
+    NfcTkcScanner* scanner;
 } NfcTeslaApp;
