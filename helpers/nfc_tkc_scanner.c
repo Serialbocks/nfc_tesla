@@ -1,6 +1,8 @@
 #include <furi/furi.h>
 #include <nfc/nfc_poller.h>
 
+#include "protocol/tkc.h"
+#include "protocol/tkc_poller.h"
 #include "nfc_tkc_scanner.h"
 
 typedef enum {
@@ -13,6 +15,8 @@ struct NfcTkcScanner {
     Nfc* nfc;
     NfcTkcScannerSessionState session_state;
 
+    Tkc* tkc_data;
+
     NfcTkcScannerCallback callback;
     void* context;
 
@@ -24,20 +28,29 @@ NfcTkcScanner* nfc_tkc_scanner_alloc(Nfc* nfc) {
 
     NfcTkcScanner* instance = malloc(sizeof(NfcTkcScanner));
     instance->nfc = nfc;
+    instance->tkc_data = tkc_alloc();
 
     return instance;
 }
 
 void nfc_tkc_scanner_free(NfcTkcScanner* instance) {
     furi_assert(instance);
+
+    tkc_free(instance->tkc_data);
     free(instance);
 }
 
 static int32_t nfc_tkc_scanner_worker(void* context) {
     furi_assert(context);
     NfcTkcScanner* instance = context;
-    UNUSED(instance);
+    furi_assert(instance->session_state == NfcTkcScannerSessionStateActive);
 
+    while(instance->session_state == NfcTkcScannerSessionStateActive) {
+        tkc_reset(instance->tkc_data);
+        //Tkc tkc_data;
+    }
+
+    instance->session_state = NfcTkcScannerSessionStateIdle;
     return 0;
 }
 
