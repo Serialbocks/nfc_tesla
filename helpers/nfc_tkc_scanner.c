@@ -1,9 +1,12 @@
 #include <furi/furi.h>
+#include <furi_hal.h>
 #include <nfc/nfc_poller.h>
 
 #include "protocol/tkc.h"
 #include "protocol/tkc_poller.h"
 #include "nfc_tkc_scanner.h"
+
+#define TAG "NFC_TESLA_tkc_scanner"
 
 typedef enum {
     NfcTkcScannerSessionStateIdle,
@@ -47,7 +50,17 @@ static int32_t nfc_tkc_scanner_worker(void* context) {
 
     while(instance->session_state == NfcTkcScannerSessionStateActive) {
         tkc_reset(instance->tkc_data);
-        //Tkc tkc_data;
+        Tkc tkc_data;
+        TkcPollerError error = tkc_poller_detect(instance->nfc, &tkc_data);
+        if(error != TkcPollerErrorNone) {
+            FURI_LOG_D(TAG, "TkcPollerError %u", error);
+            continue;
+        }
+        tkc_copy(instance->tkc_data, &tkc_data);
+        NfcTkcScannerEvent event = {
+            .type = NfcTkcScannerEventTypeDetected, .data = {.tkc_data = tkc_data}};
+        instance->callback(event, instance->context);
+        break;
     }
 
     instance->session_state = NfcTkcScannerSessionStateIdle;

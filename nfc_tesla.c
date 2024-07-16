@@ -45,21 +45,38 @@ int32_t debug_view_thread(void* contextd) {
     return 0;
 }
 
-void scanner_callback(NfcTkcScannerEvent event, void* context) {
-    UNUSED(event);
-    UNUSED(context);
+void scanner_callback(NfcTkcScannerEvent event, void* contextd) {
+    NfcTeslaApp* context = contextd;
+    if(event.type != NfcTkcScannerEventTypeNotDetected) {
+        debug_printf(
+            context, "scanner_callback data: %u", event.data.tkc_data.config.data_parsed.ats_len);
+    }
+    FURI_LOG_D(TAG, "scanner_callback: %u", event.type);
 }
 
 int32_t read_view_thread(void* contextd) {
+    FuriStatus furi_status;
+    InputEvent input_event;
     NfcTeslaApp* context = contextd;
     FURI_LOG_D(TAG, "read_view_thread");
+
     view_dispatcher_switch_to_view(context->view_dispatcher, VIEW_DISPATCHER_DEBUG);
     debug_printf(context, "Testing NFC Read...");
+
     nfc_tkc_scanner_start(context->scanner, scanner_callback, context);
-    furi_delay_ms(2000);
+    while(true) {
+        furi_status = furi_message_queue_get(event_queue, &input_event, 100);
+        if(furi_status != FuriStatusOk || input_event.type != InputTypePress) {
+            continue;
+        }
+        if(input_event.key == InputKeyBack) {
+            break;
+        }
+    }
+    furi_delay_ms(500);
     debug_printf(context, "Done! Stopping...");
     nfc_tkc_scanner_stop(context->scanner);
-    furi_delay_ms(2000);
+    furi_delay_ms(500);
     view_dispatcher_switch_to_view(context->view_dispatcher, VIEW_DISPATCHER_MENU);
     return 0;
 }

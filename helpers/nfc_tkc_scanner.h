@@ -4,6 +4,7 @@
 #include <nfc/protocols/iso14443_4a/iso14443_4a_poller.h>
 #include <nfc/protocols/iso14443_4a/iso14443_4a_poller_i.h>
 #include <nfc/protocols/iso14443_4a/iso14443_4a_listener.h>
+#include "protocol/tkc.h"
 
 typedef enum {
     NfcTkcScannerEventTypeDetected,
@@ -11,6 +12,7 @@ typedef enum {
 } NfcTkcScannerEventType;
 
 typedef struct {
+    Tkc tkc_data;
 } NfcTkcScannerEventData;
 
 typedef struct {

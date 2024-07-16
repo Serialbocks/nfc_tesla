@@ -10,9 +10,9 @@
 
 typedef NfcCommand (*TkcPollerStateHandler)(TkcPoller* instance);
 
-TkcPollerError tkc_poller_detect(Nfc* nfc, Tkc* gen4_data) {
+TkcPollerError tkc_poller_detect(Nfc* nfc, Tkc* tkc_data) {
     UNUSED(nfc);
-    UNUSED(gen4_data);
+    UNUSED(tkc_data);
     return TkcPollerErrorNone;
 }
 
