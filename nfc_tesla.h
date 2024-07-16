@@ -2,6 +2,8 @@
 
 #include <nfc/nfc_device.h>
 #include <nfc/nfc_poller.h>
+#include <nfc/nfc_listener.h>
+#include <nfc/helpers/nfc_data_generator.h>
 
 #include <gui/gui.h>
 #include <gui/elements.h>
@@ -17,7 +19,8 @@
 #include <toolbox/stream/file_stream.h>
 
 typedef struct {
-    int32_t unused;
+    TextBox* textBoxDebug;
+    FuriString* textBoxDebugText;
 } NfcTeslaAppModel;
 
 typedef struct {
@@ -28,8 +31,11 @@ typedef struct {
     Storage* storage;
 
     FuriThread* debug_view_thread;
+    FuriThread* read_view_thread;
 
     Nfc* nfc;
-    NfcDevice* nfc_device;
+    NfcDevice* source_dev;
+    NfcDevice* target_dev;
     NfcPoller* poller;
+    NfcListener* listener;
 } NfcTeslaApp;
