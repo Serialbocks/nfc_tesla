@@ -1,39 +1,14 @@
 #include <furi.h>
 #include <furi_hal.h>
 
-#include <gui/gui.h>
-#include <gui/elements.h>
-#include <gui/view_dispatcher.h>
-#include <gui/modules/menu.h>
-#include <gui/modules/popup.h>
-#include <gui/modules/text_box.h>
-#include <dialogs/dialogs.h>
-
-#include <storage/storage.h>
-#include <stream/stream.h>
-#include <stream/buffered_file_stream.h>
-#include <toolbox/stream/file_stream.h>
-
 #include "icons.h"
+#include "nfc_tesla.h"
+#include "helpers/nfc.h"
 
 #define TAG "NFC_TESLA_main"
 
 #define VIEW_DISPATCHER_MENU 0
 #define VIEW_DISPATCHER_DEBUG 1
-
-typedef struct {
-    int32_t unused;
-} NfcTeslaAppModel;
-
-typedef struct {
-    NfcTeslaAppModel* model;
-
-    ViewDispatcher* view_dispatcher;
-    Gui* gui;
-    Storage* storage;
-
-    FuriThread* debug_view_thread;
-} NfcTeslaApp;
 
 NfcTeslaApp* app;
 TextBox* textBoxDebug;
@@ -46,16 +21,22 @@ int32_t debug_view_thread(void* contextd) {
     InputEvent input_event;
     FuriStatus furi_status;
 
+    view_dispatcher_switch_to_view(context->view_dispatcher, VIEW_DISPATCHER_DEBUG);
+
     while(true) {
+        read_card(context);
+
         furi_status = furi_message_queue_get(event_queue, &input_event, 100);
         if(furi_status != FuriStatusOk || input_event.type != InputTypePress) {
             continue;
         }
         if(input_event.key == InputKeyBack) {
             view_dispatcher_switch_to_view(context->view_dispatcher, VIEW_DISPATCHER_MENU);
-            return 0;
+            break;
         }
     }
+
+    return 0;
 }
 
 void debug_printf(const char format[], ...) {
@@ -70,7 +51,6 @@ static void dispatch_view(void* contextd, uint32_t index) {
     NfcTeslaApp* context = (NfcTeslaApp*)contextd;
 
     if(index == VIEW_DISPATCHER_DEBUG) {
-        view_dispatcher_switch_to_view(context->view_dispatcher, VIEW_DISPATCHER_DEBUG);
         furi_thread_start(context->debug_view_thread);
     }
 }
@@ -81,6 +61,10 @@ static NfcTeslaApp* nfcTeslaApp_alloc() {
 
     instance->model = malloc(sizeof(NfcTeslaAppModel));
     memset(instance->model, 0x0, sizeof(NfcTeslaAppModel));
+
+    instance->nfc = nfc_alloc();
+    instance->nfc_device = nfc_device_alloc();
+    instance->poller = nfc_poller_alloc(instance->nfc, NfcProtocolIso14443_4a);
 
     instance->view_dispatcher = view_dispatcher_alloc();
 
@@ -108,6 +92,10 @@ static void nfcTeslaApp_free(NfcTeslaApp* instance) {
 
     furi_thread_join(instance->debug_view_thread);
     furi_thread_free(instance->debug_view_thread);
+
+    nfc_poller_free(instance->poller);
+    nfc_free(instance->nfc);
+    nfc_device_free(instance->nfc_device);
 
     free(instance->model);
     free(instance);
