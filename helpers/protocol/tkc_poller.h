@@ -5,8 +5,11 @@
 #include <bit_lib/bit_lib.h>
 
 #include "tkc.h"
+#include "tkc_apdu.h"
 
-#define TKC_POLLER_MAX_BUFFER_SIZE (64U)
+#define TKC_POLLER_MAX_BUFFER_SIZE (128U)
+#define TKC_POLLER_MAX_BUFFER_SIZE (128U)
+#define TKC_POLLER_MAX_FWT (200000U)
 
 typedef enum {
     TkcPollerErrorNone,
@@ -58,8 +61,6 @@ typedef struct TkcPoller {
     TkcPollerState state;
 
     Tkc* tkc_data;
-
-    TkcConfig config;
 
     BitBuffer* tx_buffer;
     BitBuffer* rx_buffer;

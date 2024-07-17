@@ -15,10 +15,10 @@ typedef union {
         uint8_t sak;
 
     } FURI_PACKED data_parsed;
-} TkcConfig;
+} TkcFormFactor;
 
 typedef struct {
-    TkcConfig config;
+    uint16_t form_factor;
 } Tkc;
 
 Tkc* tkc_alloc();

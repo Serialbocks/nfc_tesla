@@ -16,7 +16,7 @@ void tkc_free(Tkc* instance) {
 void tkc_reset(Tkc* instance) {
     furi_check(instance);
 
-    memset(&instance->config, 0, sizeof(TkcConfig));
+    instance->form_factor = 0;
 }
 
 void tkc_copy(Tkc* dest, const Tkc* source) {

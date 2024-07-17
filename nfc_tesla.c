@@ -48,8 +48,7 @@ int32_t debug_view_thread(void* contextd) {
 void scanner_callback(NfcTkcScannerEvent event, void* contextd) {
     NfcTeslaApp* context = contextd;
     if(event.type != NfcTkcScannerEventTypeNotDetected) {
-        debug_printf(
-            context, "scanner_callback data: %u", event.data.tkc_data.config.data_parsed.ats_len);
+        debug_printf(context, "scanner_callback form_factor: %u", event.data.tkc_data.form_factor);
     }
     FURI_LOG_D(TAG, "scanner_callback: %u", event.type);
 }
