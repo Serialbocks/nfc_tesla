@@ -5,11 +5,11 @@
 
 #define TKC_ATQA_LEN (2)
 
-#define TKC_APDU_PREFIX (0x80)
-#define TKC_APDU_MAX_LC_LENGTH (3)
-#define TKC_APDU_MAX_LE_LENGTH (3)
-#define TKC_APDU_MAX_DATA_LENGTH (81)
-#define TKC_APDU_MIN_LENGTH (4)
+#define TKC_APDU_PREFIX                  (0x80)
+#define TKC_APDU_MAX_LC_LENGTH           (3)
+#define TKC_APDU_MAX_LE_LENGTH           (3)
+#define TKC_APDU_MAX_DATA_LENGTH         (81)
+#define TKC_APDU_MIN_LENGTH              (4)
 #define TKC_APDU_RESPONSE_TRAILER_LENGTH (2)
 
 typedef struct TkcApduCommand {
@@ -23,14 +23,13 @@ typedef struct TkcApduCommand {
     uint8_t le[TKC_APDU_MAX_LE_LENGTH];
 } TkcApduCommand;
 
-#define TKC_PUBLIC_KEY_SIZE (65)
+#define TKC_PUBLIC_KEY_SIZE    (65)
 #define TKC_PUBLIC_KEY_EC_SIZE (32)
 typedef union {
     uint8_t data_raw[TKC_PUBLIC_KEY_SIZE];
     struct {
         uint8_t byte_1; // Always 0x04
-        uint8_t ec_point_x[TKC_PUBLIC_KEY_EC_SIZE];
-        uint8_t ec_point_y[TKC_PUBLIC_KEY_EC_SIZE];
+        uint8_t public_key[TKC_PUBLIC_KEY_SIZE - 1];
     } FURI_PACKED data_parsed;
 } TkcPublicKey;
 
@@ -43,6 +42,8 @@ typedef union {
         uint16_t unknown;
     } FURI_PACKED data_parsed;
 } TkcVersionInfo;
+
+#define TKC_AUTHENTICATION_RESPONSE_SIZE (16)
 
 typedef struct {
     TkcPublicKey public_key;

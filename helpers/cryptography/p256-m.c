@@ -8,7 +8,6 @@
 
 #include "mbedtls/3rdparty/p256-m/p256-m/p256-m.h"
 #include "mbedtls/platform_util.h"
-//#include "psa/crypto.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

@@ -29,8 +29,11 @@ static TkcApduCommand tkc_apdu_get_version_info =
 static TkcApduCommand tkc_apdu_get_form_factor =
     {.ins = 0x14, .p1 = 0x00, .p2 = 0x00, .lc_len = 0, .data = NULL, .le_len = 1, .le = {0x00}};
 
-//static TkcApduCommand tkc_apdu_authentication_challenge =
-//    {.ins = 0x11, .p1 = 0x00, .p2 = 0x00, .lc_len = 1, .lc = {0x51}, .le_len = 1, .le = {0x00}};
+#define TKC_APDU_AUTHENTICATION_PUBLIC_KEY_LEN 64
+#define TKC_APDU_AUTHENTICATION_CHALLENGE_LEN  16
+#define TKC_APDU_AUTHENTICATION_DATA_LEN       81 // sum of public key and challenge
+static TkcApduCommand tkc_apdu_authentication_challenge =
+    {.ins = 0x11, .p1 = 0x00, .p2 = 0x00, .lc_len = 1, .lc = {0x51}, .le_len = 1, .le = {0x00}};
 
 typedef struct {
     NfcPoller* poller;
@@ -172,8 +175,43 @@ NfcCommand tkc_poller_detect_callback(NfcGenericEvent event, void* context) {
 
             // perform authentication challenge
             uint8_t private_key[32];
-            uint8_t public_key[64];
-            p256_gen_keypair(private_key, public_key);
+            // First 64 bytes is the public key
+            uint8_t auth_challenge_data[TKC_APDU_AUTHENTICATION_DATA_LEN];
+            p256_gen_keypair(private_key, auth_challenge_data);
+
+            // Calculate ECDH shared secret
+            uint8_t shared_secret[32];
+            int ecdh_result = p256_ecdh_shared_secret(
+                shared_secret,
+                private_key,
+                tkc_poller_detect_ctx->tkc_data.public_key.data_parsed.public_key);
+            if(ecdh_result != 0) {
+                tkc_poller_detect_ctx->error = TkcPollerErrorProtocol;
+                FURI_LOG_D(TAG, "failure to calculate shared secret: %u", ecdh_result);
+                break;
+            }
+
+            furi_hal_random_fill_buf(
+                &(auth_challenge_data[TKC_APDU_AUTHENTICATION_PUBLIC_KEY_LEN]),
+                TKC_APDU_AUTHENTICATION_CHALLENGE_LEN);
+            tkc_apdu_authentication_challenge.data = auth_challenge_data;
+
+            bit_buffer_reset(tkc_poller_detect_ctx->tx_buffer);
+            bit_buffer_reset(tkc_poller_detect_ctx->rx_buffer);
+            error = tkc_send_apdu_command(
+                tkc_poller_detect_ctx, iso4_poller, &tkc_apdu_authentication_challenge);
+
+            if(error != TkcPollerErrorNone) {
+                tkc_poller_detect_ctx->error = TkcPollerErrorProtocol;
+                break;
+            }
+
+            rx_bytes = bit_buffer_get_size_bytes(tkc_poller_detect_ctx->rx_buffer);
+            if(rx_bytes != TKC_AUTHENTICATION_RESPONSE_SIZE + TKC_APDU_RESPONSE_TRAILER_LENGTH) {
+                FURI_LOG_D(TAG, "auth_challenge rx_bytes length: %u", rx_bytes);
+                tkc_poller_detect_ctx->error = TkcPollerErrorProtocol;
+                break;
+            }
 
         } while(false);
     } else if(iso4_event->type == Iso14443_4aPollerEventTypeError) {
