@@ -3,22 +3,30 @@
 #include "core/common_defines.h"
 #include <stdint.h>
 
-#define TKC_CONFIG_SIZE (4)
+#define TKC_PUBLIC_KEY_SIZE (65)
 #define TKC_ATQA_LEN (2)
 
-typedef union {
-    uint8_t data_raw[TKC_CONFIG_SIZE];
-    struct {
-        uint8_t ats_len;
-        //uint8_t ats[TKC_ATS_MAX_LEN]; // mb another class?
-        uint8_t atqa[TKC_ATQA_LEN];
-        uint8_t sak;
+#define TKC_APDU_PREFIX (0x80)
+#define TKC_APDU_MAX_LC_LENGTH (3)
+#define TKC_APDU_MAX_LE_LENGTH (3)
+#define TKC_APDU_MAX_DATA_LENGTH (81)
+#define TKC_APDU_MIN_LENGTH (4)
+#define TKC_APDU_RESPONSE_TRAILER_LENGTH (2)
 
-    } FURI_PACKED data_parsed;
-} TkcFormFactor;
+typedef struct TkcApduCommand {
+    uint8_t ins;
+    uint8_t p1;
+    uint8_t p2;
+    uint8_t lc_len;
+    uint8_t lc[TKC_APDU_MAX_LC_LENGTH];
+    uint8_t* data;
+    uint8_t le_len;
+    uint8_t le[TKC_APDU_MAX_LE_LENGTH];
+} TkcApduCommand;
 
 typedef struct {
     uint16_t form_factor;
+    uint8_t public_key[TKC_PUBLIC_KEY_SIZE];
 } Tkc;
 
 Tkc* tkc_alloc();

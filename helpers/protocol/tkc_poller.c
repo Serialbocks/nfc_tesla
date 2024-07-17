@@ -16,6 +16,13 @@
 
 typedef NfcCommand (*TkcPollerStateHandler)(TkcPoller* instance);
 
+/**
+ * Commands from https://gist.github.com/darconeous/2cd2de11148e3a75685940158bddf933
+ * saved locally as tesla-key-card-protocol.md
+ */
+static TkcApduCommand tkc_apdu_get_public_key =
+    {.ins = 0x04, .p1 = 0x00, .p2 = 0x00, .lc_len = 0, .data = NULL, .le_len = 1, .le = {0x00}};
+
 static TkcApduCommand tkc_apdu_get_form_factor =
     {.ins = 0x14, .p1 = 0x00, .p2 = 0x00, .lc_len = 0, .data = NULL, .le_len = 1, .le = {0x00}};
 
@@ -85,15 +92,15 @@ NfcCommand tkc_poller_detect_callback(NfcGenericEvent event, void* context) {
 
     NfcCommand command = NfcCommandStop;
     TkcPollerDetectContext* tkc_poller_detect_ctx = context;
-    Iso14443_4aPoller* iso3_poller = event.instance;
-    Iso14443_4aPollerEvent* iso3_event = event.event_data;
+    Iso14443_4aPoller* iso4_poller = event.instance;
+    Iso14443_4aPollerEvent* iso4_event = event.event_data;
     tkc_poller_detect_ctx->error = TkcPollerErrorTimeout;
 
-    if(iso3_event->type == Iso14443_4aPollerEventTypeReady) {
+    if(iso4_event->type == Iso14443_4aPollerEventTypeReady) {
         do {
             // send get_form_factor command
             TkcPollerError error = tkc_send_apdu_command(
-                tkc_poller_detect_ctx, iso3_poller, &tkc_apdu_get_form_factor);
+                tkc_poller_detect_ctx, iso4_poller, &tkc_apdu_get_form_factor);
 
             if(error != TkcPollerErrorNone) {
                 tkc_poller_detect_ctx->error = TkcPollerErrorProtocol;
@@ -102,7 +109,7 @@ NfcCommand tkc_poller_detect_callback(NfcGenericEvent event, void* context) {
             size_t rx_bytes = bit_buffer_get_size_bytes(tkc_poller_detect_ctx->rx_buffer);
             if(rx_bytes != sizeof(tkc_poller_detect_ctx->tkc_data.form_factor) +
                                TKC_APDU_RESPONSE_TRAILER_LENGTH) {
-                FURI_LOG_D(TAG, "rx_bytes length: %u", rx_bytes);
+                FURI_LOG_D(TAG, "form_factor rx_bytes length: %u", rx_bytes);
                 tkc_poller_detect_ctx->error = TkcPollerErrorProtocol;
                 break;
             }
@@ -111,14 +118,31 @@ NfcCommand tkc_poller_detect_callback(NfcGenericEvent event, void* context) {
             tkc_poller_detect_ctx->tkc_data.form_factor =
                 *((uint16_t*)bit_buffer_get_data(tkc_poller_detect_ctx->rx_buffer));
 
-            FURI_LOG_D(TAG, "form_factor: %u", tkc_poller_detect_ctx->tkc_data.form_factor);
-
-            // check revision
+            // get public key
             bit_buffer_reset(tkc_poller_detect_ctx->tx_buffer);
             bit_buffer_reset(tkc_poller_detect_ctx->rx_buffer);
+            error = tkc_send_apdu_command(
+                tkc_poller_detect_ctx, iso4_poller, &tkc_apdu_get_public_key);
+
+            if(error != TkcPollerErrorNone) {
+                tkc_poller_detect_ctx->error = TkcPollerErrorProtocol;
+                break;
+            }
+
+            rx_bytes = bit_buffer_get_size_bytes(tkc_poller_detect_ctx->rx_buffer);
+            if(rx_bytes != TKC_PUBLIC_KEY_SIZE + TKC_APDU_RESPONSE_TRAILER_LENGTH) {
+                FURI_LOG_D(TAG, "public_key rx_bytes length: %u", rx_bytes);
+                tkc_poller_detect_ctx->error = TkcPollerErrorProtocol;
+                break;
+            }
+
+            memcpy(
+                tkc_poller_detect_ctx->tkc_data.public_key,
+                bit_buffer_get_data(tkc_poller_detect_ctx->rx_buffer),
+                TKC_PUBLIC_KEY_SIZE);
 
         } while(false);
-    } else if(iso3_event->type == Iso14443_4aPollerEventTypeError) {
+    } else if(iso4_event->type == Iso14443_4aPollerEventTypeError) {
         tkc_poller_detect_ctx->error = TkcPollerErrorTimeout;
     }
 

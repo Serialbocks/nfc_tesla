@@ -5,7 +5,6 @@
 #include <bit_lib/bit_lib.h>
 
 #include "tkc.h"
-#include "tkc_apdu.h"
 
 #define TKC_POLLER_MAX_BUFFER_SIZE (128U)
 #define TKC_POLLER_MAX_BUFFER_SIZE (128U)

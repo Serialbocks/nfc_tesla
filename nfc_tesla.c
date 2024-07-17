@@ -48,9 +48,19 @@ int32_t debug_view_thread(void* contextd) {
 void scanner_callback(NfcTkcScannerEvent event, void* contextd) {
     NfcTeslaApp* context = contextd;
     if(event.type != NfcTkcScannerEventTypeNotDetected) {
-        debug_printf(context, "Card Read!\nform_factor: %#02x", event.data.tkc_data.form_factor);
+        uint16_t form_factor = event.data.tkc_data.form_factor;
+        uint8_t form_factor_byte_1 = ((uint8_t*)&(form_factor))[0];
+        uint8_t form_factor_byte_2 = ((uint8_t*)&(form_factor))[1];
+        debug_printf(
+            context,
+            "Card Read!\
+\npublic_key byte 1: 0x%02x\
+\nform_factor: 0x%02x%02x",
+            event.data.tkc_data.public_key[0],
+            form_factor_byte_1,
+            form_factor_byte_2);
     }
-    FURI_LOG_D(TAG, "scanner_callback form_factor: %#02x", event.data.tkc_data.form_factor);
+    //FURI_LOG_D(TAG, "scanner_callback form_factor: %#02x", event.data.tkc_data.form_factor);
 }
 
 int32_t read_view_thread(void* contextd) {
