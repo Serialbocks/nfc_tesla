@@ -48,9 +48,9 @@ int32_t debug_view_thread(void* contextd) {
 void scanner_callback(NfcTkcScannerEvent event, void* contextd) {
     NfcTeslaApp* context = contextd;
     if(event.type != NfcTkcScannerEventTypeNotDetected) {
-        debug_printf(context, "scanner_callback form_factor: %u", event.data.tkc_data.form_factor);
+        debug_printf(context, "Card Read!\nform_factor: %#02x", event.data.tkc_data.form_factor);
     }
-    FURI_LOG_D(TAG, "scanner_callback: %u", event.type);
+    FURI_LOG_D(TAG, "scanner_callback form_factor: %#02x", event.data.tkc_data.form_factor);
 }
 
 int32_t read_view_thread(void* contextd) {
@@ -72,10 +72,8 @@ int32_t read_view_thread(void* contextd) {
             break;
         }
     }
-    furi_delay_ms(500);
     debug_printf(context, "Done! Stopping...");
     nfc_tkc_scanner_stop(context->scanner);
-    furi_delay_ms(500);
     view_dispatcher_switch_to_view(context->view_dispatcher, VIEW_DISPATCHER_MENU);
     return 0;
 }

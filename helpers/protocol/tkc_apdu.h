@@ -12,6 +12,7 @@
 #define TKC_APDU_MAX_LE_LENGTH (3)
 #define TKC_APDU_MAX_DATA_LENGTH (81)
 #define TKC_APDU_MIN_LENGTH (4)
+#define TKC_APDU_RESPONSE_TRAILER_LENGTH (2)
 
 typedef struct TkcApduCommand {
     uint8_t ins;

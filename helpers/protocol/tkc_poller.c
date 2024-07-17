@@ -3,8 +3,8 @@
 
 #include "bit_buffer.h"
 #include "core/check.h"
-#include <nfc/protocols/iso14443_3a/iso14443_3a.h>
-#include <nfc/protocols/iso14443_3a/iso14443_3a_poller.h>
+#include <nfc/protocols/Iso14443_4a/Iso14443_4a.h>
+#include <nfc/protocols/Iso14443_4a/Iso14443_4a_poller.h>
 #include <nfc/nfc_poller.h>
 #include <bit_lib.h>
 #include <string.h>
@@ -30,7 +30,7 @@ typedef struct {
 
 static TkcPollerError tkc_send_apdu_command(
     TkcPollerDetectContext* tkc_poller_detect_ctx,
-    Iso14443_3aPoller* iso3_poller,
+    Iso14443_4aPoller* iso3_poller,
     TkcApduCommand* instruction) {
     uint8_t instruction_len = TKC_APDU_MIN_LENGTH;
     uint16_t data_len;
@@ -66,14 +66,11 @@ static TkcPollerError tkc_send_apdu_command(
             tkc_poller_detect_ctx->tx_buffer, instruction->le, instruction->le_len);
     }
 
-    Iso14443_3aError error = iso14443_3a_poller_send_standard_frame(
-        iso3_poller,
-        tkc_poller_detect_ctx->tx_buffer,
-        tkc_poller_detect_ctx->rx_buffer,
-        TKC_POLLER_MAX_FWT);
+    Iso14443_4aError error = iso14443_4a_poller_send_block(
+        iso3_poller, tkc_poller_detect_ctx->tx_buffer, tkc_poller_detect_ctx->rx_buffer);
 
-    if(error != Iso14443_3aErrorNone) {
-        FURI_LOG_D(TAG, "Iso14443_3aError %u", error);
+    if(error != Iso14443_4aErrorNone) {
+        FURI_LOG_D(TAG, "Iso14443_4aError %u", error);
         return TkcPollerErrorProtocol;
     }
 
@@ -82,17 +79,17 @@ static TkcPollerError tkc_send_apdu_command(
 
 NfcCommand tkc_poller_detect_callback(NfcGenericEvent event, void* context) {
     furi_assert(context);
-    furi_assert(event.protocol == NfcProtocolIso14443_3a);
+    furi_assert(event.protocol == NfcProtocolIso14443_4a);
     furi_assert(event.instance);
     furi_assert(event.event_data);
 
     NfcCommand command = NfcCommandStop;
     TkcPollerDetectContext* tkc_poller_detect_ctx = context;
-    Iso14443_3aPoller* iso3_poller = event.instance;
-    Iso14443_3aPollerEvent* iso3_event = event.event_data;
+    Iso14443_4aPoller* iso3_poller = event.instance;
+    Iso14443_4aPollerEvent* iso3_event = event.event_data;
     tkc_poller_detect_ctx->error = TkcPollerErrorTimeout;
 
-    if(iso3_event->type == Iso14443_3aPollerEventTypeReady) {
+    if(iso3_event->type == Iso14443_4aPollerEventTypeReady) {
         do {
             // send get_form_factor command
             TkcPollerError error = tkc_send_apdu_command(
@@ -103,22 +100,25 @@ NfcCommand tkc_poller_detect_callback(NfcGenericEvent event, void* context) {
                 break;
             }
             size_t rx_bytes = bit_buffer_get_size_bytes(tkc_poller_detect_ctx->rx_buffer);
-            if(rx_bytes != sizeof(tkc_poller_detect_ctx->tkc_data.form_factor)) {
+            if(rx_bytes != sizeof(tkc_poller_detect_ctx->tkc_data.form_factor) +
+                               TKC_APDU_RESPONSE_TRAILER_LENGTH) {
+                FURI_LOG_D(TAG, "rx_bytes length: %u", rx_bytes);
                 tkc_poller_detect_ctx->error = TkcPollerErrorProtocol;
                 break;
             }
 
-            memcpy(
-                &tkc_poller_detect_ctx->tkc_data.form_factor,
-                bit_buffer_get_data(tkc_poller_detect_ctx->rx_buffer),
-                sizeof(tkc_poller_detect_ctx->tkc_data.form_factor));
+            tkc_poller_detect_ctx->error = TkcPollerErrorNone;
+            tkc_poller_detect_ctx->tkc_data.form_factor =
+                *((uint16_t*)bit_buffer_get_data(tkc_poller_detect_ctx->rx_buffer));
+
+            FURI_LOG_D(TAG, "form_factor: %u", tkc_poller_detect_ctx->tkc_data.form_factor);
 
             // check revision
             bit_buffer_reset(tkc_poller_detect_ctx->tx_buffer);
             bit_buffer_reset(tkc_poller_detect_ctx->rx_buffer);
 
         } while(false);
-    } else if(iso3_event->type == Iso14443_3aPollerEventTypeError) {
+    } else if(iso3_event->type == Iso14443_4aPollerEventTypeError) {
         tkc_poller_detect_ctx->error = TkcPollerErrorTimeout;
     }
 
@@ -131,7 +131,7 @@ TkcPollerError tkc_poller_detect(Nfc* nfc, Tkc* tkc_data) {
     furi_assert(nfc);
 
     TkcPollerDetectContext tkc_poller_detect_ctx = {};
-    tkc_poller_detect_ctx.poller = nfc_poller_alloc(nfc, NfcProtocolIso14443_3a);
+    tkc_poller_detect_ctx.poller = nfc_poller_alloc(nfc, NfcProtocolIso14443_4a);
     tkc_poller_detect_ctx.tx_buffer = bit_buffer_alloc(TKC_POLLER_MAX_BUFFER_SIZE);
     tkc_poller_detect_ctx.rx_buffer = bit_buffer_alloc(TKC_POLLER_MAX_BUFFER_SIZE);
     tkc_poller_detect_ctx.thread_id = furi_thread_get_current_id();
@@ -161,7 +161,7 @@ TkcPoller* tkc_poller_alloc(Nfc* nfc) {
     furi_assert(nfc);
 
     TkcPoller* instance = malloc(sizeof(TkcPoller));
-    instance->poller = nfc_poller_alloc(nfc, NfcProtocolIso14443_3a);
+    instance->poller = nfc_poller_alloc(nfc, NfcProtocolIso14443_4a);
 
     instance->tkc_event.data = &instance->tkc_event_data;
 
@@ -253,16 +253,16 @@ static const TkcPollerStateHandler tkc_poller_state_handlers[TkcPollerStateNum] 
 
 static NfcCommand tkc_poller_callback(NfcGenericEvent event, void* context) {
     furi_assert(context);
-    furi_assert(event.protocol == NfcProtocolIso14443_3a);
+    furi_assert(event.protocol == NfcProtocolIso14443_4a);
     furi_assert(event.event_data);
     furi_assert(event.instance);
 
     NfcCommand command = NfcCommandContinue;
     TkcPoller* instance = context;
     instance->iso3_poller = event.instance;
-    Iso14443_3aPollerEvent* iso3_event = event.event_data;
+    Iso14443_4aPollerEvent* iso3_event = event.event_data;
 
-    if(iso3_event->type == Iso14443_3aPollerEventTypeReady) {
+    if(iso3_event->type == Iso14443_4aPollerEventTypeReady) {
         command = tkc_poller_state_handlers[instance->state](instance);
     }
 
