@@ -2,7 +2,7 @@ Tesla Key Card Protocol
 =======================
 
 > Researched by Robert Quattlebaum <darco@deepdarc.com>.
-> 
+>
 > Last updated 2020-02-03.
 
 <p align="center"><img src="https://www.tesla.com/ns_videos/commerce/content/dam/tesla/CAR_ACCESSORIES/MODEL_3/INTERIOR/1131087-00-F_1.jpg" alt="Image of Tesla Key Card" width=320 />
@@ -164,12 +164,12 @@ than 64 bytes. Such cards are not able to be used as Tesla Key Cards.
 The Tesla Key Card, as currently sold by Tesla, has the following
 potentially relevant properties:
 
- * IEEE 14443 Type A
- * UID: 7 bytes (except TPK, which may be `01020304` or a randomly selected UID starting with the value `08`)
- * ATQA: 0x4800
- * SAK: 0x20
- * ATS: `057877910200`
-    * FSCI: 8 (256 bytes)
+* IEEE 14443 Type A
+* UID: 7 bytes (except TPK, which may be `01020304` or a randomly selected UID starting with the value `08`)
+* ATQA: 0x4800
+* SAK: 0x20
+* ATS: `057877910200`
+  * FSCI: 8 (256 bytes)
 
 The secure element itself is a chip made by NXP (P60) running
 a Java Card OS of some sort. It is *NOT* a DESFire chip, it is
@@ -177,8 +177,6 @@ a real secure element.
 
 The vehicle will go through the authentication steps for TKCs it
 hasn't been paired with.
-
-
 
 ## Application Identifier (AID)
 
@@ -212,18 +210,18 @@ for TM3KF). However, it does not appear to be selectable.
 ## Quick-Reference APDUs
 
 * Select `teslaLogic` AID
-   * Cards/Fobs: `00a404000a 7465736c614c6f676963`
-   * Alternate: `00a404000a f465736c614c6f676963`
+  * Cards/Fobs: `00a404000a 7465736c614c6f676963`
+  * Alternate: `00a404000a f465736c614c6f676963`
 * Get Public ECDH Key (secp256r1)
-   * `8004000000`
+  * `8004000000`
 * Authentication Challenge (ECDH)
-   * `8011000051 [VEHICLE-PUBLIC-KEY] [16B-CHALLENGE]`
+  * `8011000051 [VEHICLE-PUBLIC-KEY] [16B-CHALLENGE]`
 * Get Form Factor
-   * `80140000`
-* Get Version Info 
-   * `80170000`
+  * `80140000`
+* Get Version Info
+  * `80170000`
 * Self Test?
-   * `80010000`
+  * `80010000`
 
 ## Important Commands
 
@@ -235,8 +233,8 @@ by probing:
 
 Field | Value | Notes
 ------|-------|---------------
-CLA   | 0x80  | 
-INS   | 0x04  | 
+CLA   | 0x80  |
+INS   | 0x04  |
 P1    | 0x00-0x03 | Key Identifier
 P2    | 0x00  |
 Lc    | —     |
@@ -261,8 +259,8 @@ byte 1| bytes 2-33 | bytes 34-65
 
 Field | Value | Notes
 ------|-------|---------------
-CLA   | 0x80  | 
-INS   | 0x06  | 
+CLA   | 0x80  |
+INS   | 0x06  |
 P1    | 0x00-0x04 | Certificate Identifier
 P2    | 0x00  |
 Lc    | —     |
@@ -306,16 +304,16 @@ doesn't appear to be the certificate that signed
 certificate at the end of this document.
 
 On the TKC, The first two bytes of the returned result represent the
-length of the certificate in bytes. There is no leading length word for the 
+length of the certificate in bytes. There is no leading length word for the
 certificates on the TM3KF.
 
 ### INS 0x07: Get Versions
 
 Field | Value | Notes
 ------|-------|---------------
-CLA   | 0x80  | 
-INS   | 0x07  | 
-P1    | 0x00  | 
+CLA   | 0x80  |
+INS   | 0x07  |
+P1    | 0x00  |
 P2    | 0x00  |
 Lc    | —     |
 Data  | —     |
@@ -340,11 +338,11 @@ Order | TKC | TM3KF
 
 Field | Value | Notes
 ------|-------|---------------
-CLA   | 0x80  | 
-INS   | 0x11  | 
-P1    | 0x00-0x03 | Key Identifier 
+CLA   | 0x80  |
+INS   | 0x11  |
+P1    | 0x00-0x03 | Key Identifier
 P2    | 0x00  |
-Lc    | 0x51  | 71 bytes in data field
+Lc    | 0x51  | 81 bytes in data field
 Data  | 0x04 ... | 65-byte NIST P.256 Vehicle Public Key
 &nbsp;| ...   | 16-byte Challenge
 Le    | 0x00  |
@@ -365,7 +363,7 @@ The 16-byte response is calculated as follows:
 3. Truncate the SHA-1 hash to the most significant 128 bits. The result is `KEY`.
 4. **OPTIONAL**: (TM3KF and TPK ONLY) The card writes over the first 4
    bytes of the challenge with random values.
-   * `CHAL[0..3] = RANDDATA(4)` 
+   * `CHAL[0..3] = RANDDATA(4)`
 5. Perform a single block encrypt operation on the provided 16-byte challenge.
    * `RESP = AES_ENC(KEY,CHAL)`
 
@@ -375,7 +373,7 @@ To verify the credential, the car does the following:
 2. Calculate the SHA-1 hash of the X parameter of the shared secret.
 3. Truncate the SHA-1 hash to the most significant 128 bits. The result is `KEY`.
 4. Send a random challenge to the credential.
-   * `CHAL[0..15] = RANDDATA(16)` 
+   * `CHAL[0..15] = RANDDATA(16)`
 5. Decrypt the response (`RESP`) when received.
    * `CHECK = AES__DEC(KEY,RESP)`
 6. If the last 12 bytes of the challenge match the last 12 bytes of
@@ -386,9 +384,9 @@ To verify the credential, the car does the following:
 
 Field | Value | Notes
 ------|-------|---------------
-CLA   | 0x80  | 
-INS   | 0x14  | 
-P1    | 0x00  | 
+CLA   | 0x80  |
+INS   | 0x14  |
+P1    | 0x00  |
 P2    | 0x00  |
 Lc    | —     |
 Data  | —     |
@@ -411,9 +409,9 @@ Tesla Phone Key (TPK)| `0x0031`
 
 Field | Value | Notes
 ------|-------|---------------
-CLA   | 0x80  | 
-INS   | 0x1B  | 
-P1    | 0x00  | 
+CLA   | 0x80  |
+INS   | 0x1B  |
+P1    | 0x00  |
 P2    | 0x00  |
 Lc    | 0x15  | 4 byte header + 17 byte VIN
 Data  | 0x2a130a11 | ASN.1 Header
@@ -501,10 +499,10 @@ implement the same protocol, but there are some differences:
 * INS 0x07 returns `0005 0003 0003` instead of `0002 0002 0002` like on the TKC. This makes it seem likely that this command returns version information (TM3KF:`teslaLogic005/teslaStore003` vs TKC:`teslaLogic002/teslaStore002`).
 * INS 0x14 (Get Form Factor) returns `0022` instead of `0001`.
 * The `80ca2f00` trick yields the following AIDs:
-   * `A000000151000000` -> Global Platform ISD
-   * `5465736C61444150` -> `TeslaDAP`
-   * `7465736C6153746F7265303033` -> `teslaStore003`
-   * `7465736C614C6F676963303035` -> `teslaLogic005`
+  * `A000000151000000` -> Global Platform ISD
+  * `5465736C61444150` -> `TeslaDAP`
+  * `7465736C6153746F7265303033` -> `teslaStore003`
+  * `7465736C614C6F676963303035` -> `teslaLogic005`
 
 The pairing process, despite the additional BTLE pairing, is exactly the same.
 
@@ -861,8 +859,7 @@ YUhk+1Y6jA==
 
 ## Acknowledgements and Thanks
 
- * [`u/rad_example`](https://www.reddit.com/user/rad_example/), for [pointing out](https://www.reddit.com/r/teslamotors/comments/drksso/how_tesla_key_cards_actually_work/f7bcbpv/) that `O=Selp` likely referrs to [selp.fr](https://www.selp.fr/en/private-identity/).
- * [Martin Paljack](https://github.com/martinpaljak/) for both [GlobalPlatformPro](https://github.com/martinpaljak/GlobalPlatformPro) and [ant-javacard](https://github.com/martinpaljak/ant-javacard), both of which I find indespensible.
- * Jonathan Westhues, for creating the [Proxmark3](http://www.proxmark.org/), along with everyone else maintaining [the software](https://github.com/Proxmark/proxmark3) for this indespensible tool.
- * [Tesla](https://tesla.com/), for making such a great vehicle
- 
+* [`u/rad_example`](https://www.reddit.com/user/rad_example/), for [pointing out](https://www.reddit.com/r/teslamotors/comments/drksso/how_tesla_key_cards_actually_work/f7bcbpv/) that `O=Selp` likely referrs to [selp.fr](https://www.selp.fr/en/private-identity/).
+* [Martin Paljack](https://github.com/martinpaljak/) for both [GlobalPlatformPro](https://github.com/martinpaljak/GlobalPlatformPro) and [ant-javacard](https://github.com/martinpaljak/ant-javacard), both of which I find indespensible.
+* Jonathan Westhues, for creating the [Proxmark3](http://www.proxmark.org/), along with everyone else maintaining [the software](https://github.com/Proxmark/proxmark3) for this indespensible tool.
+* [Tesla](https://tesla.com/), for making such a great vehicle

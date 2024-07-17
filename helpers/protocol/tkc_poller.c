@@ -11,7 +11,7 @@
 
 #include "tkc_poller.h"
 
-#define TAG "NFC_TESLA_tkc_poller"
+#define TAG                             "NFC_TESLA_tkc_poller"
 #define TKC_POLLER_THREAD_FLAG_DETECTED (1U << 0)
 
 typedef NfcCommand (*TkcPollerStateHandler)(TkcPoller* instance);
@@ -23,8 +23,14 @@ typedef NfcCommand (*TkcPollerStateHandler)(TkcPoller* instance);
 static TkcApduCommand tkc_apdu_get_public_key =
     {.ins = 0x04, .p1 = 0x00, .p2 = 0x00, .lc_len = 0, .data = NULL, .le_len = 1, .le = {0x00}};
 
+static TkcApduCommand tkc_apdu_get_version_info =
+    {.ins = 0x07, .p1 = 0x00, .p2 = 0x00, .lc_len = 0, .data = NULL, .le_len = 1, .le = {0x00}};
+
 static TkcApduCommand tkc_apdu_get_form_factor =
     {.ins = 0x14, .p1 = 0x00, .p2 = 0x00, .lc_len = 0, .data = NULL, .le_len = 1, .le = {0x00}};
+
+//static TkcApduCommand tkc_apdu_authentication_challenge =
+//    {.ins = 0x11, .p1 = 0x00, .p2 = 0x00, .lc_len = 1, .lc = {0x51}, .le_len = 1, .le = {0x00}};
 
 typedef struct {
     NfcPoller* poller;
@@ -137,9 +143,37 @@ NfcCommand tkc_poller_detect_callback(NfcGenericEvent event, void* context) {
             }
 
             memcpy(
-                tkc_poller_detect_ctx->tkc_data.public_key,
+                tkc_poller_detect_ctx->tkc_data.public_key.data_raw,
                 bit_buffer_get_data(tkc_poller_detect_ctx->rx_buffer),
                 TKC_PUBLIC_KEY_SIZE);
+
+            // get version info
+            bit_buffer_reset(tkc_poller_detect_ctx->tx_buffer);
+            bit_buffer_reset(tkc_poller_detect_ctx->rx_buffer);
+            error = tkc_send_apdu_command(
+                tkc_poller_detect_ctx, iso4_poller, &tkc_apdu_get_version_info);
+
+            if(error != TkcPollerErrorNone) {
+                tkc_poller_detect_ctx->error = TkcPollerErrorProtocol;
+                break;
+            }
+
+            rx_bytes = bit_buffer_get_size_bytes(tkc_poller_detect_ctx->rx_buffer);
+            if(rx_bytes != TKC_VERSION_INFO_SIZE + TKC_APDU_RESPONSE_TRAILER_LENGTH) {
+                FURI_LOG_D(TAG, "version_info rx_bytes length: %u", rx_bytes);
+                tkc_poller_detect_ctx->error = TkcPollerErrorProtocol;
+                break;
+            }
+
+            memcpy(
+                tkc_poller_detect_ctx->tkc_data.version_info.data_raw,
+                bit_buffer_get_data(tkc_poller_detect_ctx->rx_buffer),
+                TKC_VERSION_INFO_SIZE);
+
+            // perform authentication challenge
+            uint8_t private_key[32];
+            uint8_t public_key[64];
+            p256_gen_keypair(private_key, public_key);
 
         } while(false);
     } else if(iso4_event->type == Iso14443_4aPollerEventTypeError) {

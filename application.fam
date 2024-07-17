@@ -4,10 +4,7 @@ App(
     apptype=FlipperAppType.EXTERNAL,
     entry_point="nfctesla_app",
     cdefines=["APP_NFC_TESLA"],
-    requires=[
-        "gui",
-        "dialogs",
-    ],
+    requires=["gui", "dialogs"],
     stack_size=6 * 1024,
     order=1,
     fap_icon="assets/Nfc_10px.png",

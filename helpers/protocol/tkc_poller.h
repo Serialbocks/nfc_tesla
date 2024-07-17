@@ -4,11 +4,12 @@
 #include <nfc/protocols/iso14443_3a/iso14443_3a_poller.h>
 #include <bit_lib/bit_lib.h>
 
+#include "mbedtls/3rdparty/p256-m/p256-m/p256-m.h"
 #include "tkc.h"
 
 #define TKC_POLLER_MAX_BUFFER_SIZE (128U)
 #define TKC_POLLER_MAX_BUFFER_SIZE (128U)
-#define TKC_POLLER_MAX_FWT (200000U)
+#define TKC_POLLER_MAX_FWT         (200000U)
 
 typedef enum {
     TkcPollerErrorNone,

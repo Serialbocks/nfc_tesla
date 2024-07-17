@@ -3,7 +3,6 @@
 #include "core/common_defines.h"
 #include <stdint.h>
 
-#define TKC_PUBLIC_KEY_SIZE (65)
 #define TKC_ATQA_LEN (2)
 
 #define TKC_APDU_PREFIX (0x80)
@@ -24,9 +23,31 @@ typedef struct TkcApduCommand {
     uint8_t le[TKC_APDU_MAX_LE_LENGTH];
 } TkcApduCommand;
 
+#define TKC_PUBLIC_KEY_SIZE (65)
+#define TKC_PUBLIC_KEY_EC_SIZE (32)
+typedef union {
+    uint8_t data_raw[TKC_PUBLIC_KEY_SIZE];
+    struct {
+        uint8_t byte_1; // Always 0x04
+        uint8_t ec_point_x[TKC_PUBLIC_KEY_EC_SIZE];
+        uint8_t ec_point_y[TKC_PUBLIC_KEY_EC_SIZE];
+    } FURI_PACKED data_parsed;
+} TkcPublicKey;
+
+#define TKC_VERSION_INFO_SIZE (6)
+typedef union {
+    uint8_t data_raw[TKC_VERSION_INFO_SIZE];
+    struct {
+        uint16_t tesla_logic_version;
+        uint16_t tesla_store_version;
+        uint16_t unknown;
+    } FURI_PACKED data_parsed;
+} TkcVersionInfo;
+
 typedef struct {
+    TkcPublicKey public_key;
+    TkcVersionInfo version_info;
     uint16_t form_factor;
-    uint8_t public_key[TKC_PUBLIC_KEY_SIZE];
 } Tkc;
 
 Tkc* tkc_alloc();
