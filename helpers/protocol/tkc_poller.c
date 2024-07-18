@@ -201,6 +201,10 @@ NfcCommand tkc_poller_detect_callback(NfcGenericEvent event, void* context) {
                 &(auth_challenge_data[TKC_APDU_AUTHENTICATION_PUBLIC_KEY_LEN]),
                 TKC_APDU_AUTHENTICATION_CHALLENGE_LEN);
             tkc_apdu_authentication_challenge.data = auth_challenge_data;
+            memcpy(
+                tkc_poller_detect_ctx->tkc_data.auth_challenge,
+                bit_buffer_get_data(tkc_poller_detect_ctx->rx_buffer),
+                TKC_APDU_AUTHENTICATION_CHALLENGE_LEN);
 
             bit_buffer_reset(tkc_poller_detect_ctx->tx_buffer);
             bit_buffer_reset(tkc_poller_detect_ctx->rx_buffer);
@@ -218,6 +222,23 @@ NfcCommand tkc_poller_detect_callback(NfcGenericEvent event, void* context) {
                 tkc_poller_detect_ctx->error = TkcPollerErrorProtocol;
                 break;
             }
+
+            // Decrypt the response and check
+            uint8_t auth_response[TKC_AUTHENTICATION_RESPONSE_SIZE];
+            memcpy(
+                auth_response,
+                bit_buffer_get_data(tkc_poller_detect_ctx->rx_buffer),
+                TKC_AUTHENTICATION_RESPONSE_SIZE);
+
+            mbedtls_aes_context aes_context;
+            mbedtls_aes_init(&aes_context);
+            mbedtls_aes_setkey_dec(&aes_context, sha1, 128);
+            mbedtls_aes_crypt_ecb(
+                &aes_context,
+                MBEDTLS_AES_DECRYPT,
+                auth_response,
+                tkc_poller_detect_ctx->tkc_data.auth_challenge_result);
+            mbedtls_aes_free(&aes_context);
 
         } while(false);
     } else if(iso4_event->type == Iso14443_4aPollerEventTypeError) {

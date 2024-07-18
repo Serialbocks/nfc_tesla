@@ -43,12 +43,15 @@ typedef union {
     } FURI_PACKED data_parsed;
 } TkcVersionInfo;
 
-#define TKC_AUTHENTICATION_RESPONSE_SIZE (16)
+#define TKC_AUTHENTICATION_CHALLENGE_SIZE (16)
+#define TKC_AUTHENTICATION_RESPONSE_SIZE  TKC_AUTHENTICATION_CHALLENGE_SIZE
 
 typedef struct {
     TkcPublicKey public_key;
     TkcVersionInfo version_info;
     uint16_t form_factor;
+    uint8_t auth_challenge[TKC_AUTHENTICATION_CHALLENGE_SIZE];
+    uint8_t auth_challenge_result[TKC_AUTHENTICATION_CHALLENGE_SIZE];
 } Tkc;
 
 Tkc* tkc_alloc();

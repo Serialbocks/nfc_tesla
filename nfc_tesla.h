@@ -8,6 +8,7 @@
 #include <gui/gui.h>
 #include <gui/elements.h>
 #include <gui/view_dispatcher.h>
+#include <gui/view_stack.h>
 #include <gui/modules/menu.h>
 #include <gui/modules/popup.h>
 #include <gui/modules/text_box.h>
@@ -22,8 +23,8 @@
 #include "helpers/nfc_tkc_scanner.h"
 
 typedef struct {
-    TextBox* textBoxDebug;
-    FuriString* textBoxDebugText;
+    TextBox* text_box_debug;
+    FuriString* text_box_debug_text;
 } NfcTeslaAppModel;
 
 typedef struct {
