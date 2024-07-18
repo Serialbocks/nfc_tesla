@@ -6,6 +6,7 @@
 
 #include "mbedtls/3rdparty/p256-m/p256-m/p256-m.h"
 #include "mbedtls/sha1.h"
+#include "mbedtls/aes.h"
 #include "tkc.h"
 
 #define TKC_POLLER_MAX_BUFFER_SIZE (128U)

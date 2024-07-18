@@ -10,5 +10,5 @@ App(
     fap_icon="assets/Nfc_10px.png",
     fap_category="NFC",
     fap_icon_assets="assets",
-    fap_libs=["assets"],
+    fap_libs=["assets", "mbedtls"],
 )

@@ -29,7 +29,7 @@ static TkcApduCommand tkc_apdu_get_version_info =
 static TkcApduCommand tkc_apdu_get_form_factor =
     {.ins = 0x14, .p1 = 0x00, .p2 = 0x00, .lc_len = 0, .data = NULL, .le_len = 1, .le = {0x00}};
 
-#define TKC_APDU_AUTHENTICATION_PUBLIC_KEY_LEN 64
+#define TKC_APDU_AUTHENTICATION_PUBLIC_KEY_LEN 65
 #define TKC_APDU_AUTHENTICATION_CHALLENGE_LEN  16
 #define TKC_APDU_AUTHENTICATION_DATA_LEN       81 // sum of public key and challenge
 static TkcApduCommand tkc_apdu_authentication_challenge =
@@ -82,6 +82,7 @@ static TkcPollerError tkc_send_apdu_command(
             tkc_poller_detect_ctx->tx_buffer, instruction->le, instruction->le_len);
     }
 
+    FURI_LOG_D(TAG, "Send block instruction_len: %u", instruction_len);
     Iso14443_4aError error = iso14443_4a_poller_send_block(
         iso3_poller, tkc_poller_detect_ctx->tx_buffer, tkc_poller_detect_ctx->rx_buffer);
 
@@ -177,7 +178,8 @@ NfcCommand tkc_poller_detect_callback(NfcGenericEvent event, void* context) {
             uint8_t private_key[32];
             // First 64 bytes is the public key
             uint8_t auth_challenge_data[TKC_APDU_AUTHENTICATION_DATA_LEN];
-            p256_gen_keypair(private_key, auth_challenge_data);
+            auth_challenge_data[0] = 0x04;
+            p256_gen_keypair(private_key, &(auth_challenge_data[1]));
 
             // Calculate ECDH shared secret
             uint8_t shared_secret[32];
@@ -190,6 +192,10 @@ NfcCommand tkc_poller_detect_callback(NfcGenericEvent event, void* context) {
                 FURI_LOG_D(TAG, "failure to calculate shared secret: %u", ecdh_result);
                 break;
             }
+
+            // Calculate the key from the sha1 of the shared key
+            uint8_t sha1[20];
+            mbedtls_sha1(shared_secret, 32, sha1);
 
             furi_hal_random_fill_buf(
                 &(auth_challenge_data[TKC_APDU_AUTHENTICATION_PUBLIC_KEY_LEN]),
