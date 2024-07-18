@@ -45,24 +45,12 @@ int32_t debug_view_thread(void* contextd) {
     return 0;
 }
 
-static const NotificationSequence blink_start_cyan = {
-    &message_blink_start_10,
-    &message_blink_set_color_cyan,
-    &message_do_not_reset,
-    NULL,
-};
-
-static const NotificationSequence blink_stop = {
-    &message_blink_stop,
-    NULL,
-};
-
 static void app_blink_start(NfcTeslaApp* instance) {
-    notification_message(instance->notifications, &blink_start_cyan);
+    notification_message(instance->notifications, &sequence_blink_start_cyan);
 }
 
 static void app_blink_stop(NfcTeslaApp* instance) {
-    notification_message(instance->notifications, &blink_stop);
+    notification_message(instance->notifications, &sequence_blink_stop);
 }
 
 static void app_read_success(NfcTeslaApp* instance) {
