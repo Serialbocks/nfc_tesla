@@ -23,8 +23,8 @@
 #include "helpers/nfc_tkc_scanner.h"
 
 typedef struct {
-    TextBox* text_box_debug;
-    FuriString* text_box_debug_text;
+    TextBox* text_box_read;
+    FuriString* text_box_read_text;
 } NfcTeslaAppModel;
 
 typedef struct {
@@ -35,7 +35,6 @@ typedef struct {
     Storage* storage;
     NotificationApp* notifications;
 
-    FuriThread* debug_view_thread;
     FuriThread* read_view_thread;
 
     Nfc* nfc;
