@@ -203,7 +203,7 @@ NfcCommand tkc_poller_detect_callback(NfcGenericEvent event, void* context) {
             tkc_apdu_authentication_challenge.data = auth_challenge_data;
             memcpy(
                 tkc_poller_detect_ctx->tkc_data.auth_challenge,
-                bit_buffer_get_data(tkc_poller_detect_ctx->rx_buffer),
+                &(auth_challenge_data[TKC_APDU_AUTHENTICATION_PUBLIC_KEY_LEN]),
                 TKC_APDU_AUTHENTICATION_CHALLENGE_LEN);
 
             bit_buffer_reset(tkc_poller_detect_ctx->tx_buffer);

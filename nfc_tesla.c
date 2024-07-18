@@ -66,12 +66,11 @@ void scanner_callback(NfcTkcScannerEvent event, void* contextd) {
         uint8_t form_factor_byte_2 = ((uint8_t*)&(form_factor))[1];
         debug_printf(
             context,
-            "Card Read!\
+            "Read success!\
 \npublic_key byte 1: 0x%02x\
 \nversion: 0x%02x%02x\
 \nform_factor: 0x%02x%02x\
-\nauth_challenge: 0x%02x%02x\
-\nauth_challenge_result: 0x%02x%02x",
+\nauth_challenge:\n0x%02x%02x\n0x%02x%02x",
             event.data.tkc_data.public_key.data_parsed.byte_1,
             event.data.tkc_data.version_info.data_raw[0],
             event.data.tkc_data.version_info.data_raw[1],

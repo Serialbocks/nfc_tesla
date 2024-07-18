@@ -52,6 +52,7 @@ typedef struct {
     uint16_t form_factor;
     uint8_t auth_challenge[TKC_AUTHENTICATION_CHALLENGE_SIZE];
     uint8_t auth_challenge_result[TKC_AUTHENTICATION_CHALLENGE_SIZE];
+    uint8_t auth_challenge_is_successful;
 } Tkc;
 
 Tkc* tkc_alloc();
