@@ -65,6 +65,10 @@ static void app_blink_stop(NfcTeslaApp* instance) {
     notification_message(instance->notifications, &blink_stop);
 }
 
+static void app_read_success(NfcTeslaApp* instance) {
+    notification_message(instance->notifications, &sequence_success);
+}
+
 void scanner_callback(NfcTkcScannerEvent event, void* contextd) {
     NfcTeslaApp* context = contextd;
     if(event.type != NfcTkcScannerEventTypeNotDetected) {
@@ -82,6 +86,7 @@ void scanner_callback(NfcTkcScannerEvent event, void* contextd) {
             event.data.tkc_data.version_info.data_raw[1],
             form_factor_byte_1,
             form_factor_byte_2);
+        app_read_success(context);
         app_blink_stop(context);
     }
     //FURI_LOG_D(TAG, "scanner_callback form_factor: %#02x", event.data.tkc_data.form_factor);
