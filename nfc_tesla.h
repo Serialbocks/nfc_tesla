@@ -12,6 +12,7 @@
 #include <gui/modules/popup.h>
 #include <gui/modules/text_box.h>
 #include <dialogs/dialogs.h>
+#include <notification/notification_messages.h>
 
 #include <storage/storage.h>
 #include <stream/stream.h>
@@ -31,6 +32,7 @@ typedef struct {
     ViewDispatcher* view_dispatcher;
     Gui* gui;
     Storage* storage;
+    NotificationApp* notifications;
 
     FuriThread* debug_view_thread;
     FuriThread* read_view_thread;

@@ -6,9 +6,9 @@
 
 #define TAG "NFC_TESLA_main"
 
-#define VIEW_DISPATCHER_MENU 0
+#define VIEW_DISPATCHER_MENU  0
 #define VIEW_DISPATCHER_DEBUG 1
-#define VIEW_DISPATCHER_READ 2
+#define VIEW_DISPATCHER_READ  2
 
 NfcTeslaApp* app;
 Popup* popup;
@@ -45,6 +45,26 @@ int32_t debug_view_thread(void* contextd) {
     return 0;
 }
 
+static const NotificationSequence blink_start_cyan = {
+    &message_blink_start_10,
+    &message_blink_set_color_cyan,
+    &message_do_not_reset,
+    NULL,
+};
+
+static const NotificationSequence blink_stop = {
+    &message_blink_stop,
+    NULL,
+};
+
+static void app_blink_start(NfcTeslaApp* instance) {
+    notification_message(instance->notifications, &blink_start_cyan);
+}
+
+static void app_blink_stop(NfcTeslaApp* instance) {
+    notification_message(instance->notifications, &blink_stop);
+}
+
 void scanner_callback(NfcTkcScannerEvent event, void* contextd) {
     NfcTeslaApp* context = contextd;
     if(event.type != NfcTkcScannerEventTypeNotDetected) {
@@ -62,6 +82,7 @@ void scanner_callback(NfcTkcScannerEvent event, void* contextd) {
             event.data.tkc_data.version_info.data_raw[1],
             form_factor_byte_1,
             form_factor_byte_2);
+        app_blink_stop(context);
     }
     //FURI_LOG_D(TAG, "scanner_callback form_factor: %#02x", event.data.tkc_data.form_factor);
 }
@@ -75,6 +96,7 @@ int32_t read_view_thread(void* contextd) {
     view_dispatcher_switch_to_view(context->view_dispatcher, VIEW_DISPATCHER_DEBUG);
     debug_printf(context, "Testing NFC Read...");
 
+    app_blink_start(context);
     nfc_tkc_scanner_start(context->scanner, scanner_callback, context);
     while(true) {
         furi_status = furi_message_queue_get(event_queue, &input_event, 100);
@@ -85,8 +107,9 @@ int32_t read_view_thread(void* contextd) {
             break;
         }
     }
-    debug_printf(context, "Done! Stopping...");
+
     nfc_tkc_scanner_stop(context->scanner);
+    app_blink_stop(context);
     view_dispatcher_switch_to_view(context->view_dispatcher, VIEW_DISPATCHER_MENU);
     return 0;
 }
@@ -122,6 +145,8 @@ static NfcTeslaApp* nfcTeslaApp_alloc() {
 
     instance->storage = furi_record_open(RECORD_STORAGE);
 
+    instance->notifications = furi_record_open(RECORD_NOTIFICATION);
+
     instance->debug_view_thread =
         furi_thread_alloc_ex("debug_view_thread", 512, debug_view_thread, instance);
     instance->read_view_thread =
@@ -139,6 +164,9 @@ static void nfcTeslaApp_free(NfcTeslaApp* instance) {
 
     view_dispatcher_free(instance->view_dispatcher);
     furi_record_close(RECORD_GUI);
+
+    furi_record_close(RECORD_NOTIFICATION);
+    instance->notifications = NULL;
 
     furi_thread_join(instance->debug_view_thread);
     furi_thread_free(instance->debug_view_thread);
