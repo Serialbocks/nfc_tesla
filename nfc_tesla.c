@@ -7,19 +7,41 @@
 #define TAG "NFC_TESLA_main"
 
 #define VIEW_DISPATCHER_MENU 0
-#define VIEW_DISPATCHER_READ 2
+#define VIEW_DISPATCHER_READ 1
 
 NfcTeslaApp* app;
 Popup* popup;
 FuriMessageQueue* event_queue;
 
-void read_textbox_printf(NfcTeslaApp* instance, const char format[], ...) {
+static void
+    textbox_printf(TextBox* text_box, FuriString* text_box_text, const char format[], ...) {
     va_list args;
     va_start(args, format);
-    furi_string_vprintf(instance->model->text_box_read_text, format, args);
-    text_box_set_text(
-        instance->model->text_box_read, furi_string_get_cstr(instance->model->text_box_read_text));
+    furi_string_vprintf(text_box_text, format, args);
+    text_box_set_text(text_box, furi_string_get_cstr(text_box_text));
     va_end(args);
+}
+
+static void
+    textbox_cat_printf(TextBox* text_box, FuriString* text_box_text, const char format[], ...) {
+    va_list args;
+    va_start(args, format);
+    furi_string_cat_printf(text_box_text, format, args);
+    text_box_set_text(text_box, furi_string_get_cstr(text_box_text));
+    va_end(args);
+}
+
+static void textbox_cat_print_bytes(
+    TextBox* text_box,
+    FuriString* text_box_text,
+    uint8_t* data,
+    uint8_t length) {
+    furi_string_cat_printf(text_box_text, "0x");
+    for(uint8_t i = 0; i < length; i++) {
+        furi_string_cat_printf(text_box_text, "%02x", data[i]);
+    }
+
+    text_box_set_text(text_box, furi_string_get_cstr(text_box_text));
 }
 
 static void app_blink_start(NfcTeslaApp* instance) {
@@ -40,22 +62,33 @@ void scanner_callback(NfcTkcScannerEvent event, void* contextd) {
         uint16_t form_factor = event.data.tkc_data.form_factor;
         uint8_t form_factor_byte_1 = ((uint8_t*)&(form_factor))[0];
         uint8_t form_factor_byte_2 = ((uint8_t*)&(form_factor))[1];
-        read_textbox_printf(
-            context,
+
+        textbox_printf(
+            context->model->text_box_read,
+            context->model->text_box_read_text,
             "Read success!\
-\npublic_key byte 1: 0x%02x\
 \nversion: 0x%02x%02x\
 \nform_factor: 0x%02x%02x\
-\nauth_challenge:\n0x%02x%02x\n0x%02x%02x",
-            event.data.tkc_data.public_key.data_parsed.byte_1,
+\nauth_challenge_res: %d\n",
             event.data.tkc_data.version_info.data_raw[0],
             event.data.tkc_data.version_info.data_raw[1],
             form_factor_byte_1,
             form_factor_byte_2,
-            event.data.tkc_data.auth_challenge[4],
-            event.data.tkc_data.auth_challenge[5],
-            event.data.tkc_data.auth_challenge_result[4],
-            event.data.tkc_data.auth_challenge_result[5]);
+            event.data.tkc_data.auth_challenge_is_successful);
+
+        textbox_cat_print_bytes(
+            context->model->text_box_read,
+            context->model->text_box_read_text,
+            event.data.tkc_data.auth_challenge,
+            TKC_AUTHENTICATION_CHALLENGE_SIZE);
+        textbox_cat_printf(
+            context->model->text_box_read, context->model->text_box_read_text, "\n");
+        textbox_cat_print_bytes(
+            context->model->text_box_read,
+            context->model->text_box_read_text,
+            event.data.tkc_data.auth_challenge_result,
+            TKC_AUTHENTICATION_CHALLENGE_SIZE);
+
         app_read_success(context);
         app_blink_stop(context);
     }
@@ -68,7 +101,8 @@ int32_t read_view_thread(void* contextd) {
     FURI_LOG_D(TAG, "read_view_thread");
 
     view_dispatcher_switch_to_view(context->view_dispatcher, VIEW_DISPATCHER_READ);
-    read_textbox_printf(context, "Reading card...");
+    textbox_printf(
+        context->model->text_box_read, context->model->text_box_read_text, "Reading card...");
 
     app_blink_start(context);
     nfc_tkc_scanner_start(context->scanner, scanner_callback, context);

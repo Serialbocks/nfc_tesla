@@ -240,6 +240,13 @@ NfcCommand tkc_poller_detect_callback(NfcGenericEvent event, void* context) {
                 tkc_poller_detect_ctx->tkc_data.auth_challenge_result);
             mbedtls_aes_free(&aes_context);
 
+            // compare decrypted response with original challenge
+            int cmp_result = memcmp(
+                tkc_poller_detect_ctx->tkc_data.auth_challenge,
+                tkc_poller_detect_ctx->tkc_data.auth_challenge_result,
+                TKC_APDU_AUTHENTICATION_CHALLENGE_LEN);
+            tkc_poller_detect_ctx->tkc_data.auth_challenge_is_successful = (cmp_result == 0);
+
         } while(false);
     } else if(iso4_event->type == Iso14443_4aPollerEventTypeError) {
         tkc_poller_detect_ctx->error = TkcPollerErrorTimeout;
