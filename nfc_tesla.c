@@ -59,7 +59,7 @@ static void app_read_success(NfcTeslaApp* instance) {
 void scanner_callback(NfcTkcScannerEvent event, void* contextd) {
     NfcTeslaApp* context = contextd;
     if(event.type != NfcTkcScannerEventTypeNotDetected) {
-        uint16_t form_factor = event.data.tkc_data.form_factor;
+        uint16_t form_factor = event.data.tkc_data->form_factor;
         uint8_t form_factor_byte_1 = ((uint8_t*)&(form_factor))[0];
         uint8_t form_factor_byte_2 = ((uint8_t*)&(form_factor))[1];
 
@@ -69,25 +69,39 @@ void scanner_callback(NfcTkcScannerEvent event, void* contextd) {
             "Read success!\
 \nversion: 0x%02x%02x\
 \nform_factor: 0x%02x%02x\
-\nauth_challenge_res: %d\n",
-            event.data.tkc_data.version_info.data_raw[0],
-            event.data.tkc_data.version_info.data_raw[1],
+\nauth_challenge_res: %d\
+\nsak: 0x%02x\
+\natqa: 0x%02x%02x\
+\nuid: ",
+            event.data.tkc_data->version_info.data_raw[0],
+            event.data.tkc_data->version_info.data_raw[1],
             form_factor_byte_1,
             form_factor_byte_2,
-            event.data.tkc_data.auth_challenge_is_successful);
+            event.data.tkc_data->auth_challenge_is_successful,
+            event.data.tkc_data->iso14443_4a_data->iso14443_3a_data->sak,
+            event.data.tkc_data->iso14443_4a_data->iso14443_3a_data->atqa[0],
+            event.data.tkc_data->iso14443_4a_data->iso14443_3a_data->atqa[1]);
+        textbox_cat_print_bytes(
+            context->model->text_box_read,
+            context->model->text_box_read_text,
+            event.data.tkc_data->iso14443_4a_data->iso14443_3a_data->uid,
+            event.data.tkc_data->iso14443_4a_data->iso14443_3a_data->uid_len);
 
-        textbox_cat_print_bytes(
-            context->model->text_box_read,
-            context->model->text_box_read_text,
-            event.data.tkc_data.auth_challenge,
-            TKC_AUTHENTICATION_CHALLENGE_SIZE);
         textbox_cat_printf(
-            context->model->text_box_read, context->model->text_box_read_text, "\n");
+            context->model->text_box_read, context->model->text_box_read_text, "\nATS: ");
         textbox_cat_print_bytes(
             context->model->text_box_read,
             context->model->text_box_read_text,
-            event.data.tkc_data.auth_challenge_result,
-            TKC_AUTHENTICATION_CHALLENGE_SIZE);
+            (uint8_t*)&event.data.tkc_data->iso14443_4a_data->ats_data,
+            sizeof(Iso14443_4aAtsData));
+
+        textbox_cat_printf(
+            context->model->text_box_read, context->model->text_box_read_text, "\nPublic key: ");
+        textbox_cat_print_bytes(
+            context->model->text_box_read,
+            context->model->text_box_read_text,
+            event.data.tkc_data->public_key.data_parsed.public_key,
+            TKC_PUBLIC_KEY_SIZE - 1);
 
         app_read_success(context);
         app_blink_stop(context);

@@ -50,15 +50,13 @@ static int32_t nfc_tkc_scanner_worker(void* context) {
 
     while(instance->session_state == NfcTkcScannerSessionStateActive) {
         tkc_reset(instance->tkc_data);
-        Tkc tkc_data;
-        TkcPollerError error = tkc_poller_detect(instance->nfc, &tkc_data);
+        TkcPollerError error = tkc_poller_detect(instance->nfc, instance->tkc_data);
         if(error != TkcPollerErrorNone) {
             FURI_LOG_D(TAG, "TkcPollerError %u", error);
             continue;
         }
-        tkc_copy(instance->tkc_data, &tkc_data);
         NfcTkcScannerEvent event = {
-            .type = NfcTkcScannerEventTypeDetected, .data = {.tkc_data = tkc_data}};
+            .type = NfcTkcScannerEventTypeDetected, .data = {.tkc_data = instance->tkc_data}};
         instance->callback(event, instance->context);
         break;
     }

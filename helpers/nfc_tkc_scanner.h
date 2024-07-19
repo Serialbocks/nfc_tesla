@@ -12,7 +12,7 @@ typedef enum {
 } NfcTkcScannerEventType;
 
 typedef struct {
-    Tkc tkc_data;
+    Tkc* tkc_data;
 } NfcTkcScannerEventData;
 
 typedef struct {

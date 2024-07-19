@@ -2,6 +2,7 @@
 
 #include "core/common_defines.h"
 #include <stdint.h>
+#include <nfc/protocols/Iso14443_4a/Iso14443_4a_poller_i.h>
 
 #define TKC_ATQA_LEN (2)
 
@@ -53,6 +54,9 @@ typedef struct {
     uint8_t auth_challenge[TKC_AUTHENTICATION_CHALLENGE_SIZE];
     uint8_t auth_challenge_result[TKC_AUTHENTICATION_CHALLENGE_SIZE];
     uint8_t auth_challenge_is_successful;
+
+    // These fields must occur last!!
+    Iso14443_4aData* iso14443_4a_data;
 } Tkc;
 
 Tkc* tkc_alloc();

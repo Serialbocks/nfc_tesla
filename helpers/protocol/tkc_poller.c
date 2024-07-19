@@ -5,6 +5,7 @@
 #include "core/check.h"
 #include <nfc/protocols/Iso14443_4a/Iso14443_4a.h>
 #include <nfc/protocols/Iso14443_4a/Iso14443_4a_poller.h>
+#include <nfc/protocols/Iso14443_4a/Iso14443_4a_poller_i.h>
 #include <nfc/nfc_poller.h>
 #include <bit_lib.h>
 #include <string.h>
@@ -37,7 +38,7 @@ static TkcApduCommand tkc_apdu_authentication_challenge =
 
 typedef struct {
     NfcPoller* poller;
-    Tkc tkc_data;
+    Tkc* tkc_data;
     BitBuffer* tx_buffer;
     BitBuffer* rx_buffer;
     FuriThreadId thread_id;
@@ -46,7 +47,7 @@ typedef struct {
 
 static TkcPollerError tkc_send_apdu_command(
     TkcPollerDetectContext* tkc_poller_detect_ctx,
-    Iso14443_4aPoller* iso3_poller,
+    Iso14443_4aPoller* iso4_poller,
     TkcApduCommand* instruction) {
     uint8_t instruction_len = TKC_APDU_MIN_LENGTH;
     uint16_t data_len;
@@ -84,7 +85,7 @@ static TkcPollerError tkc_send_apdu_command(
 
     FURI_LOG_D(TAG, "Send block instruction_len: %u", instruction_len);
     Iso14443_4aError error = iso14443_4a_poller_send_block(
-        iso3_poller, tkc_poller_detect_ctx->tx_buffer, tkc_poller_detect_ctx->rx_buffer);
+        iso4_poller, tkc_poller_detect_ctx->tx_buffer, tkc_poller_detect_ctx->rx_buffer);
 
     if(error != Iso14443_4aErrorNone) {
         FURI_LOG_D(TAG, "Iso14443_4aError %u", error);
@@ -117,7 +118,7 @@ NfcCommand tkc_poller_detect_callback(NfcGenericEvent event, void* context) {
                 break;
             }
             size_t rx_bytes = bit_buffer_get_size_bytes(tkc_poller_detect_ctx->rx_buffer);
-            if(rx_bytes != sizeof(tkc_poller_detect_ctx->tkc_data.form_factor) +
+            if(rx_bytes != sizeof(tkc_poller_detect_ctx->tkc_data->form_factor) +
                                TKC_APDU_RESPONSE_TRAILER_LENGTH) {
                 FURI_LOG_D(TAG, "form_factor rx_bytes length: %u", rx_bytes);
                 tkc_poller_detect_ctx->error = TkcPollerErrorProtocol;
@@ -125,7 +126,7 @@ NfcCommand tkc_poller_detect_callback(NfcGenericEvent event, void* context) {
             }
 
             tkc_poller_detect_ctx->error = TkcPollerErrorNone;
-            tkc_poller_detect_ctx->tkc_data.form_factor =
+            tkc_poller_detect_ctx->tkc_data->form_factor =
                 *((uint16_t*)bit_buffer_get_data(tkc_poller_detect_ctx->rx_buffer));
 
             // get public key
@@ -147,7 +148,7 @@ NfcCommand tkc_poller_detect_callback(NfcGenericEvent event, void* context) {
             }
 
             memcpy(
-                tkc_poller_detect_ctx->tkc_data.public_key.data_raw,
+                tkc_poller_detect_ctx->tkc_data->public_key.data_raw,
                 bit_buffer_get_data(tkc_poller_detect_ctx->rx_buffer),
                 TKC_PUBLIC_KEY_SIZE);
 
@@ -170,7 +171,7 @@ NfcCommand tkc_poller_detect_callback(NfcGenericEvent event, void* context) {
             }
 
             memcpy(
-                tkc_poller_detect_ctx->tkc_data.version_info.data_raw,
+                tkc_poller_detect_ctx->tkc_data->version_info.data_raw,
                 bit_buffer_get_data(tkc_poller_detect_ctx->rx_buffer),
                 TKC_VERSION_INFO_SIZE);
 
@@ -186,7 +187,7 @@ NfcCommand tkc_poller_detect_callback(NfcGenericEvent event, void* context) {
             int ecdh_result = p256_ecdh_shared_secret(
                 shared_secret,
                 private_key,
-                tkc_poller_detect_ctx->tkc_data.public_key.data_parsed.public_key);
+                tkc_poller_detect_ctx->tkc_data->public_key.data_parsed.public_key);
             if(ecdh_result != 0) {
                 tkc_poller_detect_ctx->error = TkcPollerErrorProtocol;
                 FURI_LOG_D(TAG, "failure to calculate shared secret: %u", ecdh_result);
@@ -202,7 +203,7 @@ NfcCommand tkc_poller_detect_callback(NfcGenericEvent event, void* context) {
                 TKC_APDU_AUTHENTICATION_CHALLENGE_LEN);
             tkc_apdu_authentication_challenge.data = auth_challenge_data;
             memcpy(
-                tkc_poller_detect_ctx->tkc_data.auth_challenge,
+                tkc_poller_detect_ctx->tkc_data->auth_challenge,
                 &(auth_challenge_data[TKC_APDU_AUTHENTICATION_PUBLIC_KEY_LEN]),
                 TKC_APDU_AUTHENTICATION_CHALLENGE_LEN);
 
@@ -237,15 +238,18 @@ NfcCommand tkc_poller_detect_callback(NfcGenericEvent event, void* context) {
                 &aes_context,
                 MBEDTLS_AES_DECRYPT,
                 auth_response,
-                tkc_poller_detect_ctx->tkc_data.auth_challenge_result);
+                tkc_poller_detect_ctx->tkc_data->auth_challenge_result);
             mbedtls_aes_free(&aes_context);
 
             // compare decrypted response with original challenge
             int cmp_result = memcmp(
-                tkc_poller_detect_ctx->tkc_data.auth_challenge,
-                tkc_poller_detect_ctx->tkc_data.auth_challenge_result,
+                tkc_poller_detect_ctx->tkc_data->auth_challenge,
+                tkc_poller_detect_ctx->tkc_data->auth_challenge_result,
                 TKC_APDU_AUTHENTICATION_CHALLENGE_LEN);
-            tkc_poller_detect_ctx->tkc_data.auth_challenge_is_successful = (cmp_result == 0);
+            tkc_poller_detect_ctx->tkc_data->auth_challenge_is_successful = (cmp_result == 0);
+
+            // copy Iso14443_4aData data to return object
+            iso14443_4a_copy(tkc_poller_detect_ctx->tkc_data->iso14443_4a_data, iso4_poller->data);
 
         } while(false);
     } else if(iso4_event->type == Iso14443_4aPollerEventTypeError) {
@@ -264,6 +268,7 @@ TkcPollerError tkc_poller_detect(Nfc* nfc, Tkc* tkc_data) {
     tkc_poller_detect_ctx.poller = nfc_poller_alloc(nfc, NfcProtocolIso14443_4a);
     tkc_poller_detect_ctx.tx_buffer = bit_buffer_alloc(TKC_POLLER_MAX_BUFFER_SIZE);
     tkc_poller_detect_ctx.rx_buffer = bit_buffer_alloc(TKC_POLLER_MAX_BUFFER_SIZE);
+    tkc_poller_detect_ctx.tkc_data = tkc_data;
     tkc_poller_detect_ctx.thread_id = furi_thread_get_current_id();
     tkc_poller_detect_ctx.error = TkcPollerErrorNone;
 
@@ -279,10 +284,6 @@ TkcPollerError tkc_poller_detect(Nfc* nfc, Tkc* tkc_data) {
     nfc_poller_free(tkc_poller_detect_ctx.poller);
     bit_buffer_free(tkc_poller_detect_ctx.tx_buffer);
     bit_buffer_free(tkc_poller_detect_ctx.rx_buffer);
-
-    if(tkc_poller_detect_ctx.error == TkcPollerErrorNone) {
-        tkc_copy(tkc_data, &tkc_poller_detect_ctx.tkc_data);
-    }
 
     return tkc_poller_detect_ctx.error;
 }
