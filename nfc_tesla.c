@@ -8,6 +8,7 @@
 
 #define VIEW_DISPATCHER_MENU 0
 #define VIEW_DISPATCHER_READ 1
+#define VIEW_DISPATCHER_LOAD 2
 
 NfcTeslaApp* app;
 Popup* popup;
@@ -157,9 +158,8 @@ static NfcTeslaApp* nfcTeslaApp_alloc() {
     memset(instance->model, 0x0, sizeof(NfcTeslaAppModel));
 
     instance->nfc = nfc_alloc();
-    instance->source_dev = nfc_device_alloc();
-    instance->target_dev = nfc_device_alloc();
     instance->scanner = nfc_tkc_scanner_alloc(instance->nfc);
+    instance->nfc_device = nfc_device_alloc();
 
     instance->view_dispatcher = view_dispatcher_alloc();
 
@@ -194,9 +194,8 @@ static void nfcTeslaApp_free(NfcTeslaApp* instance) {
     furi_thread_free(instance->read_view_thread);
 
     nfc_tkc_scanner_free(instance->scanner);
+    nfc_device_free(instance->nfc_device);
     nfc_free(instance->nfc);
-    nfc_device_free(instance->source_dev);
-    nfc_device_free(instance->target_dev);
 
     free(instance->model);
     free(instance);

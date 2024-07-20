@@ -38,10 +38,8 @@ typedef struct {
     FuriThread* read_view_thread;
 
     Nfc* nfc;
-    NfcDevice* source_dev;
-    NfcDevice* target_dev;
     NfcPoller* poller;
-    NfcListener* listener;
+    NfcDevice* nfc_device;
 
     NfcTkcScanner* scanner;
 } NfcTeslaApp;
