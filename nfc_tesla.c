@@ -94,6 +94,11 @@ void scanner_callback(NfcTkcScannerEvent event, void* contextd) {
             context->model->text_box_read_text,
             (uint8_t*)&event.data.tkc_data->iso14443_4a_data->ats_data,
             5);
+        textbox_cat_printf(
+            context->model->text_box_read,
+            context->model->text_box_read_text,
+            "\nFSCI elem count: %d",
+            simple_array_get_count(event.data.tkc_data->iso14443_4a_data->ats_data.t1_tk));
 
         textbox_cat_printf(
             context->model->text_box_read, context->model->text_box_read_text, "\nPublic key: ");
