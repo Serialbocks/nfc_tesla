@@ -234,14 +234,21 @@ static NfcTeslaApp* nfcTeslaApp_alloc() {
     FURI_LOG_D(TAG, "alloc");
     NfcTeslaApp* instance = malloc(sizeof(NfcTeslaApp));
 
+    FURI_LOG_D(TAG, "malloc");
     instance->model = malloc(sizeof(NfcTeslaAppModel));
+    FURI_LOG_D(TAG, "memset");
     memset(instance->model, 0x0, sizeof(NfcTeslaAppModel));
 
+    FURI_LOG_D(TAG, "nfc_alloc");
     instance->nfc = nfc_alloc();
+    FURI_LOG_D(TAG, "nfc_tkc_scanner_alloc");
     instance->scanner = nfc_tkc_scanner_alloc(instance->nfc);
+    FURI_LOG_D(TAG, "nfc_device_alloc");
     instance->nfc_device = nfc_device_alloc();
+    FURI_LOG_D(TAG, "nfc_tkc_listener_alloc");
     instance->listener = nfc_tkc_listener_alloc(instance);
 
+    FURI_LOG_D(TAG, "view_dispatcher_alloc");
     instance->view_dispatcher = view_dispatcher_alloc();
 
     instance->gui = furi_record_open(RECORD_GUI);
