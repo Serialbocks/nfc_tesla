@@ -22,7 +22,7 @@
 #include <toolbox/path.h>
 
 #include "helpers/nfc_tkc_scanner.h"
-#include "helpers/protocol/tkc_listener.h"
+#include "helpers/nfc_tkc_listener.h"
 
 #define NFC_TESLA_APP_EXTENSION ".nfc"
 #define NFC_TESLA_APP_FOLDER    ANY_PATH("nfc")
@@ -52,7 +52,7 @@ typedef struct {
     Nfc* nfc;
     NfcPoller* poller;
     NfcDevice* nfc_device;
-    TkcListener* listener;
+    NfcTkcListener* listener;
 
     NfcTkcScanner* scanner;
 } NfcTeslaApp;

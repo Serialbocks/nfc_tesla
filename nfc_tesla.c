@@ -180,8 +180,8 @@ int32_t read_view_thread(void* contextd) {
     return 0;
 }
 
-static void listener_callback(TkcListenerEvent event, void* contextd) {
-    TkcListener* instance = contextd;
+static void listener_callback(NfcTkcListenerEvent event, void* contextd) {
+    NfcTkcListener* instance = contextd;
     UNUSED(event);
     UNUSED(instance);
 }
@@ -198,7 +198,7 @@ int32_t listen_view_thread(void* contextd) {
         "Emulating Key Card...");
 
     app_blink_start(context);
-    tkc_listener_start(context->listener, listener_callback);
+    nfc_tkc_listener_start(context->listener, listener_callback);
     while(true) {
         furi_status = furi_message_queue_get(event_queue, &input_event, 100);
         if(furi_status != FuriStatusOk || input_event.type != InputTypePress) {
@@ -209,7 +209,7 @@ int32_t listen_view_thread(void* contextd) {
         }
     }
 
-    tkc_listener_stop(context->listener);
+    nfc_tkc_listener_stop(context->listener);
     app_blink_stop(context);
     view_dispatcher_switch_to_view(context->view_dispatcher, VIEW_DISPATCHER_MENU);
     return 0;
@@ -240,7 +240,7 @@ static NfcTeslaApp* nfcTeslaApp_alloc() {
     instance->nfc = nfc_alloc();
     instance->scanner = nfc_tkc_scanner_alloc(instance->nfc);
     instance->nfc_device = nfc_device_alloc();
-    instance->listener = tkc_listener_alloc(instance);
+    instance->listener = nfc_tkc_listener_alloc(instance);
 
     instance->view_dispatcher = view_dispatcher_alloc();
 
@@ -285,7 +285,7 @@ static void nfcTeslaApp_free(NfcTeslaApp* instance) {
     furi_thread_join(instance->listen_view_thread);
     furi_thread_free(instance->listen_view_thread);
 
-    tkc_listener_free(instance->listener);
+    nfc_tkc_listener_free(instance->listener);
     nfc_tkc_scanner_free(instance->scanner);
     nfc_device_free(instance->nfc_device);
     nfc_free(instance->nfc);
