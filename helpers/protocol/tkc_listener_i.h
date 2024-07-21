@@ -8,5 +8,8 @@
 struct TkcListener {
     Nfc* nfc;
     NfcListener* listener;
-    Iso14443_4aData* iso14443_4adata;
+    const Iso14443_4aData* iso14443_4adata;
+
+    NfcGenericCallback callback;
+    void* context;
 };
