@@ -1,10 +1,12 @@
 #include <furi.h>
 
 #include "nfc_tesla.h"
-#include "tkc_listener_i.h"
 
-TkcListener* tkc_listener_alloc(NfcTeslaApp* app) {
+#include "tkc_listener.h"
+
+TkcListener* tkc_listener_alloc(void* appd) {
     TkcListener* instance = malloc(sizeof(TkcListener));
+    NfcTeslaApp* app = appd;
     instance->context = app;
     instance->iso14443_4adata = nfc_device_get_data(app->nfc_device, NfcProtocolIso14443_4a);
     instance->nfc = app->nfc;
@@ -20,12 +22,14 @@ void tkc_listener_free(TkcListener* instance) {
 
 static NfcCommand tkc_listener_start_callback(NfcGenericEvent event, void* contextd) {
     TkcListener* instance = contextd;
+    TkcListenerEvent result = {.type = TkcListenerEventTypeNotDetected};
+    UNUSED(event);
 
-    instance->callback(event, instance->context);
+    instance->callback(result, instance->context);
     return NfcCommandContinue;
 }
 
-void tkc_listener_start(TkcListener* instance, NfcGenericCallback callback) {
+void tkc_listener_start(TkcListener* instance, TkcListenerCallback callback) {
     furi_assert(instance);
     furi_assert(callback);
 

@@ -19,27 +19,40 @@
 #include <stream/stream.h>
 #include <stream/buffered_file_stream.h>
 #include <toolbox/stream/file_stream.h>
+#include <toolbox/path.h>
 
 #include "helpers/nfc_tkc_scanner.h"
+#include "helpers/protocol/tkc_listener.h"
+
+#define NFC_TESLA_APP_EXTENSION ".nfc"
+#define NFC_TESLA_APP_FOLDER    ANY_PATH("nfc")
 
 typedef struct {
     TextBox* text_box_read;
     FuriString* text_box_read_text;
+
+    TextBox* text_box_listen;
+    FuriString* text_box_listen_text;
 } NfcTeslaAppModel;
 
 typedef struct {
     NfcTeslaAppModel* model;
+    DialogsApp* dialogs;
 
     ViewDispatcher* view_dispatcher;
     Gui* gui;
     Storage* storage;
     NotificationApp* notifications;
+    FuriString* file_path;
+    FuriString* file_name;
 
     FuriThread* read_view_thread;
+    FuriThread* listen_view_thread;
 
     Nfc* nfc;
     NfcPoller* poller;
     NfcDevice* nfc_device;
+    TkcListener* listener;
 
     NfcTkcScanner* scanner;
 } NfcTeslaApp;
