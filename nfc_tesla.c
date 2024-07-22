@@ -8,8 +8,7 @@
 
 #define VIEW_DISPATCHER_MENU   0
 #define VIEW_DISPATCHER_READ   1
-#define VIEW_DISPATCHER_LOAD   2
-#define VIEW_DISPATCHER_LISTEN 3
+#define VIEW_DISPATCHER_LISTEN 2
 
 NfcTeslaApp* app;
 Popup* popup;
@@ -62,22 +61,28 @@ static bool load_file(NfcTeslaApp* instance, FuriString* path, bool show_dialog)
     furi_assert(instance);
     furi_assert(path);
 
+    FURI_LOG_D(TAG, "nfc_device_load");
+    FURI_LOG_D(TAG, furi_string_get_cstr(path));
     bool result = nfc_device_load(instance->nfc_device, furi_string_get_cstr(path));
 
     if(result) {
+        FURI_LOG_D(TAG, "path_extract_filename");
         path_extract_filename(path, instance->file_name, true);
     }
 
     if((!result) && (show_dialog)) {
+        FURI_LOG_D(TAG, "dialog_message_show_storage_error");
         dialog_message_show_storage_error(instance->dialogs, "Cannot load\nkey file");
     }
 
+    FURI_LOG_D(TAG, "load_file return result");
     return result;
 }
 
 static bool load_from_file_select(NfcTeslaApp* instance) {
     furi_assert(instance);
 
+    FURI_LOG_D(TAG, "load_from_file_select");
     DialogsFileBrowserOptions browser_options;
     dialog_file_browser_set_basic_options(&browser_options, NFC_TESLA_APP_EXTENSION, &I_125_10px);
     browser_options.base_path = NFC_TESLA_APP_FOLDER;
@@ -86,9 +91,11 @@ static bool load_from_file_select(NfcTeslaApp* instance) {
     bool success = false;
     do {
         // Input events and views are managed by file_browser
+        FURI_LOG_D(TAG, "dialog_file_browser_show");
         if(!dialog_file_browser_show(
                instance->dialogs, instance->file_path, instance->file_path, &browser_options))
             break;
+        FURI_LOG_D(TAG, "load_file");
         success = load_file(instance, instance->file_path, true);
     } while(!success);
 
@@ -191,15 +198,26 @@ int32_t listen_view_thread(void* contextd) {
     InputEvent input_event;
     NfcTeslaApp* context = contextd;
 
-    view_dispatcher_switch_to_view(context->view_dispatcher, VIEW_DISPATCHER_LISTEN);
+    bool success = load_from_file_select(context);
+    if(success) {
+        FURI_LOG_D(TAG, "view_dispatcher_switch_to_view VIEW_DISPATCHER_MENU");
+        view_dispatcher_switch_to_view(context->view_dispatcher, VIEW_DISPATCHER_MENU);
+        return 0;
+    }
+
+    FURI_LOG_D(TAG, "listen_view_thread");
     textbox_printf(
         context->model->text_box_listen,
         context->model->text_box_listen_text,
         "Emulating Key Card...");
 
+    FURI_LOG_D(TAG, "app_blink_start");
+
     app_blink_start(context);
+    FURI_LOG_D(TAG, "nfc_tkc_listener_start");
     nfc_tkc_listener_start(context->listener, listener_callback);
     while(true) {
+        FURI_LOG_D(TAG, "furi_message_queue_get");
         furi_status = furi_message_queue_get(event_queue, &input_event, 100);
         if(furi_status != FuriStatusOk || input_event.type != InputTypePress) {
             continue;
@@ -209,8 +227,11 @@ int32_t listen_view_thread(void* contextd) {
         }
     }
 
+    FURI_LOG_D(TAG, "nfc_tkc_listener_stop");
     nfc_tkc_listener_stop(context->listener);
+    FURI_LOG_D(TAG, "app_blink_stop");
     app_blink_stop(context);
+    FURI_LOG_D(TAG, "view_dispatcher_switch_to_view");
     view_dispatcher_switch_to_view(context->view_dispatcher, VIEW_DISPATCHER_MENU);
     return 0;
 }
@@ -220,12 +241,8 @@ static void dispatch_view(void* contextd, uint32_t index) {
 
     if(index == VIEW_DISPATCHER_READ) {
         furi_thread_start(context->read_view_thread);
-    } else if(index == VIEW_DISPATCHER_LOAD) {
-        bool success = load_from_file_select(context);
-        if(success) {
-            view_dispatcher_switch_to_view(context->view_dispatcher, VIEW_DISPATCHER_LISTEN);
-        }
     } else if(index == VIEW_DISPATCHER_LISTEN) {
+        FURI_LOG_D(TAG, "furi_thread_start listen_view_thread");
         furi_thread_start(context->listen_view_thread);
     }
 }
@@ -266,7 +283,7 @@ static NfcTeslaApp* nfcTeslaApp_alloc() {
     instance->read_view_thread =
         furi_thread_alloc_ex("read_view_thread", 512, read_view_thread, instance);
     instance->listen_view_thread =
-        furi_thread_alloc_ex("listen_view_thread", 512, listen_view_thread, instance);
+        furi_thread_alloc_ex("listen_view_thread", 512 * 2, listen_view_thread, instance);
 
     return instance;
 }
@@ -280,6 +297,7 @@ static void nfcTeslaApp_free(NfcTeslaApp* instance) {
 
     view_dispatcher_remove_view(app->view_dispatcher, VIEW_DISPATCHER_MENU);
     view_dispatcher_remove_view(app->view_dispatcher, VIEW_DISPATCHER_READ);
+    view_dispatcher_remove_view(app->view_dispatcher, VIEW_DISPATCHER_LISTEN);
 
     view_dispatcher_free(instance->view_dispatcher);
     furi_record_close(RECORD_GUI);
@@ -324,7 +342,7 @@ int32_t nfctesla_app() {
     Menu* mainMenu = menu_alloc();
     menu_add_item(mainMenu, "Read Card", &I_125_10px, VIEW_DISPATCHER_READ, dispatch_view, app);
     menu_add_item(
-        mainMenu, "Load Saved Card", &I_125_10px, VIEW_DISPATCHER_LOAD, dispatch_view, app);
+        mainMenu, "Load Saved Card", &I_125_10px, VIEW_DISPATCHER_LISTEN, dispatch_view, app);
 
     // Debug
     app->model->text_box_read = text_box_alloc();
@@ -342,7 +360,7 @@ int32_t nfctesla_app() {
     app->model->text_box_listen = text_box_alloc();
     app->model->text_box_listen_text = furi_string_alloc();
 
-    text_box_set_font(app->model->text_box_read, TextBoxFontText);
+    text_box_set_font(app->model->text_box_listen, TextBoxFontText);
     View* listen_view = view_alloc();
     view_set_input_callback(listen_view, input_callback);
     view_set_context(listen_view, app);

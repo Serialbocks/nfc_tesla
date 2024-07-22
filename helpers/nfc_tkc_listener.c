@@ -1,8 +1,11 @@
 #include <furi.h>
+#include <furi_hal.h>
 
 #include "nfc_tesla.h"
 
 #include "nfc_tkc_listener.h"
+
+#define TAG "NFC_TESLA_nfc_tkc_listener"
 
 NfcTkcListener* nfc_tkc_listener_alloc(void* appd) {
     NfcTkcListener* instance = malloc(sizeof(NfcTkcListener));
@@ -11,6 +14,7 @@ NfcTkcListener* nfc_tkc_listener_alloc(void* appd) {
     instance->nfc = app->nfc;
     return instance;
 }
+
 void nfc_tkc_listener_free(NfcTkcListener* instance) {
     furi_assert(instance);
 
@@ -44,6 +48,9 @@ void nfc_tkc_listener_start(NfcTkcListener* instance, NfcTkcListenerCallback cal
 void nfc_tkc_listener_stop(NfcTkcListener* instance) {
     furi_assert(instance);
 
+    FURI_LOG_D(TAG, "nfc_listener_stop");
     nfc_listener_stop(instance->listener);
+    FURI_LOG_D(TAG, "nfc_listener_free");
     nfc_listener_free(instance->listener);
+    FURI_LOG_D(TAG, "nfc_listener_free done");
 }
