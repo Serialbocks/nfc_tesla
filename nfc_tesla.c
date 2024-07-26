@@ -61,9 +61,12 @@ static bool load_file(NfcTeslaApp* instance, FuriString* path, bool show_dialog)
     furi_assert(instance);
     furi_assert(path);
 
+    FuriString* load_path = furi_string_alloc();
+    furi_string_set(load_path, path);
+
     FURI_LOG_D(TAG, "nfc_device_load");
     FURI_LOG_D(TAG, furi_string_get_cstr(path));
-    bool result = nfc_device_load(instance->nfc_device, furi_string_get_cstr(path));
+    bool result = nfc_device_load(instance->nfc_device, furi_string_get_cstr(load_path));
 
     if(result) {
         FURI_LOG_D(TAG, "path_extract_filename");
@@ -75,6 +78,7 @@ static bool load_file(NfcTeslaApp* instance, FuriString* path, bool show_dialog)
         dialog_message_show_storage_error(instance->dialogs, "Cannot load\nkey file");
     }
 
+    furi_string_free(load_path);
     FURI_LOG_D(TAG, "load_file return result");
     return result;
 }
@@ -199,7 +203,7 @@ int32_t listen_view_thread(void* contextd) {
     NfcTeslaApp* context = contextd;
 
     bool success = load_from_file_select(context);
-    if(success) {
+    if(!success) {
         FURI_LOG_D(TAG, "view_dispatcher_switch_to_view VIEW_DISPATCHER_MENU");
         view_dispatcher_switch_to_view(context->view_dispatcher, VIEW_DISPATCHER_MENU);
         return 0;
@@ -283,7 +287,7 @@ static NfcTeslaApp* nfcTeslaApp_alloc() {
     instance->read_view_thread =
         furi_thread_alloc_ex("read_view_thread", 512, read_view_thread, instance);
     instance->listen_view_thread =
-        furi_thread_alloc_ex("listen_view_thread", 512 * 2, listen_view_thread, instance);
+        furi_thread_alloc_ex("listen_view_thread", 4 * 1024, listen_view_thread, instance);
 
     return instance;
 }
