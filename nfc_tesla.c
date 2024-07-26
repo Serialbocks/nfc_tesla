@@ -202,6 +202,7 @@ int32_t listen_view_thread(void* contextd) {
     InputEvent input_event;
     NfcTeslaApp* context = contextd;
 
+    view_dispatcher_switch_to_view(context->view_dispatcher, VIEW_DISPATCHER_LISTEN);
     bool success = load_from_file_select(context);
     if(!success) {
         FURI_LOG_D(TAG, "view_dispatcher_switch_to_view VIEW_DISPATCHER_MENU");
