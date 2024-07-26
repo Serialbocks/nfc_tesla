@@ -193,9 +193,9 @@ int32_t read_view_thread(void* contextd) {
 
 static void listener_callback(NfcTkcListenerEvent event, void* contextd) {
     NfcTkcListener* instance = contextd;
-    //UNUSED(event);
+    UNUSED(event);
     UNUSED(instance);
-    FURI_LOG_D(TAG, "event type: %d", event.type);
+    //FURI_LOG_D(TAG, "event type: %d", event.type);
 }
 
 int32_t listen_view_thread(void* contextd) {
@@ -223,7 +223,6 @@ int32_t listen_view_thread(void* contextd) {
     FURI_LOG_D(TAG, "nfc_tkc_listener_start");
     nfc_tkc_listener_start(context->listener, listener_callback);
     while(true) {
-        FURI_LOG_D(TAG, "furi_message_queue_get");
         furi_status = furi_message_queue_get(event_queue, &input_event, 100);
         if(furi_status != FuriStatusOk || input_event.type != InputTypePress) {
             continue;

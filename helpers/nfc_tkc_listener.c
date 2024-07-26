@@ -1,5 +1,6 @@
 #include <furi.h>
 #include <furi_hal.h>
+#include <toolbox/bit_buffer.h>
 
 #include "nfc_tesla.h"
 
@@ -24,9 +25,29 @@ void nfc_tkc_listener_free(NfcTkcListener* instance) {
 static NfcCommand tkc_listener_start_callback(NfcGenericEvent event, void* contextd) {
     NfcTkcListener* instance = contextd;
     NfcTkcListenerEvent result = {.type = NfcTkcListenerEventTypeNotDetected};
-    UNUSED(event);
+    Iso14443_4aListenerEvent* iso14443_event = event.event_data;
 
-    FURI_LOG_D(TAG, "tkc_listener_start_callback()");
+    size_t data_size_bits = bit_buffer_get_size(iso14443_event->data->buffer);
+    size_t data_size_bytes = data_size_bits / 8;
+
+    if(data_size_bits == 0) {
+        FURI_LOG_D(TAG, "tkc_listener_start_callback() No data received!");
+        return NfcCommandContinue;
+    }
+
+    const uint8_t* data = bit_buffer_get_data(iso14443_event->data->buffer);
+
+    FURI_LOG_D(TAG, "tkc_listener_start_callback() event_type: %d", iso14443_event->type);
+    FURI_LOG_D(TAG, "data size: %d bits (%d bytes)", data_size_bits, data_size_bytes);
+    FuriString* debug_text = furi_string_alloc();
+    furi_string_cat_printf(debug_text, "0x");
+    for(uint8_t i = 0; i < data_size_bytes; i++) {
+        furi_string_cat_printf(debug_text, "%02x", data[i]);
+    }
+
+    FURI_LOG_D(TAG, furi_string_get_cstr(debug_text));
+    furi_string_free(debug_text);
+
     instance->callback(result, instance->context);
     return NfcCommandContinue;
 }
