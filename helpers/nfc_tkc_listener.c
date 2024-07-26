@@ -26,6 +26,7 @@ static NfcCommand tkc_listener_start_callback(NfcGenericEvent event, void* conte
     NfcTkcListenerEvent result = {.type = NfcTkcListenerEventTypeNotDetected};
     UNUSED(event);
 
+    FURI_LOG_D(TAG, "tkc_listener_start_callback()");
     instance->callback(result, instance->context);
     return NfcCommandContinue;
 }

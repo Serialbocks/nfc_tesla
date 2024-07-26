@@ -193,8 +193,9 @@ int32_t read_view_thread(void* contextd) {
 
 static void listener_callback(NfcTkcListenerEvent event, void* contextd) {
     NfcTkcListener* instance = contextd;
-    UNUSED(event);
+    //UNUSED(event);
     UNUSED(instance);
+    FURI_LOG_D(TAG, "event type: %d", event.type);
 }
 
 int32_t listen_view_thread(void* contextd) {
@@ -286,7 +287,7 @@ static NfcTeslaApp* nfcTeslaApp_alloc() {
     instance->file_name = furi_string_alloc();
 
     instance->read_view_thread =
-        furi_thread_alloc_ex("read_view_thread", 512, read_view_thread, instance);
+        furi_thread_alloc_ex("read_view_thread", 4 * 512, read_view_thread, instance);
     instance->listen_view_thread =
         furi_thread_alloc_ex("listen_view_thread", 4 * 1024, listen_view_thread, instance);
 
