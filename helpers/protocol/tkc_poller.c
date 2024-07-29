@@ -88,7 +88,7 @@ static TkcPollerError tkc_send_apdu_command(
         iso4_poller, tkc_poller_detect_ctx->tx_buffer, tkc_poller_detect_ctx->rx_buffer);
 
     if(error != Iso14443_4aErrorNone) {
-        FURI_LOG_D(TAG, "Iso14443_4aError %u", error);
+        FURI_LOG_D(TAG, "Iso14443_4aError %u for command 0x%02x", error, instruction->ins);
         return TkcPollerErrorProtocol;
     }
 

@@ -31,15 +31,14 @@ static NfcTkcListenerEventType tkc_respond_to_command(
     Iso14443_3aListener* iso14443_listener,
     BitBuffer* rx_buffer,
     Iso14443_4aListenerEvent* iso14443_event) {
-    UNUSED(instance);
-    UNUSED(iso14443_listener);
+    BitBuffer* tx_buffer = instance->tx_buffer;
 
     const uint8_t* data = bit_buffer_get_data(rx_buffer);
     size_t data_size_bits = bit_buffer_get_size(rx_buffer);
     size_t data_size_bytes = data_size_bits / 8;
 
-    if(data_size_bits == 0) {
-        FURI_LOG_D(TAG, "tkc_respond_to_command() No data received!");
+    if(data_size_bits < 3) {
+        FURI_LOG_W(TAG, "tkc_respond_to_command() No data received!");
         return NfcTkcListenerEventTypeNotDetected;
     }
 
@@ -53,6 +52,36 @@ static NfcTkcListenerEventType tkc_respond_to_command(
     }
     FURI_LOG_D(TAG, furi_string_get_cstr(debug_text));
     furi_string_free(debug_text);
+
+    bool response_required = false;
+    if(data[1] == TKC_APDU_PREFIX) {
+        uint8_t ins = data[2];
+        switch(ins) {
+        case 0x14:
+            response_required = true;
+            bit_buffer_reset(tx_buffer);
+
+            bit_buffer_append_byte(tx_buffer, data[0]);
+
+            bit_buffer_append_byte(tx_buffer, 0x00);
+            bit_buffer_append_byte(tx_buffer, 0x01);
+            break;
+        default:
+            break;
+        }
+    }
+
+    if(response_required) {
+        bit_buffer_append_byte(tx_buffer, 0x90);
+        bit_buffer_append_byte(tx_buffer, 0x00);
+        iso14443_crc_append(Iso14443CrcTypeA, tx_buffer);
+
+        NfcError error = nfc_listener_tx((Nfc*)iso14443_listener, tx_buffer);
+        if(error != NfcErrorNone) {
+            FURI_LOG_W(TAG, "Tx error: %d", error);
+            return NfcTkcListenerEventTypeError;
+        }
+    }
 
     return NfcTkcListenerEventTypeDetected;
 }

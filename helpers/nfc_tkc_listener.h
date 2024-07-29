@@ -2,11 +2,12 @@
 
 #include <nfc/nfc_listener.h>
 #include <nfc/protocols/iso14443_4a/iso14443_4a_listener.h>
-#include <nfc/protocols/iso14443_3a/iso14443_3a_listener_i.h>
+#include <nfc/helpers/iso14443_crc.h>
 
 typedef enum {
     NfcTkcListenerEventTypeDetected,
     NfcTkcListenerEventTypeNotDetected,
+    NfcTkcListenerEventTypeError
 } NfcTkcListenerEventType;
 
 typedef struct {
