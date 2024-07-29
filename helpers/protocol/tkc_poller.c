@@ -51,8 +51,14 @@ static TkcApduCommand tkc_apdu_get_form_factor = {
 #define TKC_APDU_AUTHENTICATION_PUBLIC_KEY_LEN 65
 #define TKC_APDU_AUTHENTICATION_CHALLENGE_LEN  16
 #define TKC_APDU_AUTHENTICATION_DATA_LEN       81 // sum of public key and challenge
-static TkcApduCommand tkc_apdu_authentication_challenge =
-    {.ins = 0x11, .p1 = 0x00, .p2 = 0x00, .lc_len = 1, .lc = {0x51}, .le_len = 1, .le = {0x00}};
+static TkcApduCommand tkc_apdu_authentication_challenge = {
+    .ins = TCK_APDU_AUTHENTICATION_CHALLENGE_INS,
+    .p1 = 0x00,
+    .p2 = 0x00,
+    .lc_len = 1,
+    .lc = {0x51},
+    .le_len = 1,
+    .le = {0x00}};
 
 typedef struct {
     NfcPoller* poller;

@@ -73,6 +73,8 @@ static NfcTkcListenerEventType tkc_respond_to_command(
             break;
         case TKC_APDU_GET_PUBLIC_KEY_INS:
             response_required = true;
+            bit_buffer_append_byte(tx_buffer, 0x04);
+            bit_buffer_append_bytes(tx_buffer, instance->public_key, NFC_TKC_PUBLIC_KEY_SIZE);
             break;
         default:
             break;
