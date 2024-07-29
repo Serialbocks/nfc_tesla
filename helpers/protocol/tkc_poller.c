@@ -21,14 +21,32 @@ typedef NfcCommand (*TkcPollerStateHandler)(TkcPoller* instance);
  * Commands from https://gist.github.com/darconeous/2cd2de11148e3a75685940158bddf933
  * saved locally as tesla-key-card-protocol.md
  */
-static TkcApduCommand tkc_apdu_get_public_key =
-    {.ins = 0x04, .p1 = 0x00, .p2 = 0x00, .lc_len = 0, .data = NULL, .le_len = 1, .le = {0x00}};
+static TkcApduCommand tkc_apdu_get_public_key = {
+    .ins = TKC_APDU_GET_PUBLIC_KEY_INS,
+    .p1 = 0x00,
+    .p2 = 0x00,
+    .lc_len = 0,
+    .data = NULL,
+    .le_len = 1,
+    .le = {0x00}};
 
-static TkcApduCommand tkc_apdu_get_version_info =
-    {.ins = 0x07, .p1 = 0x00, .p2 = 0x00, .lc_len = 0, .data = NULL, .le_len = 1, .le = {0x00}};
+static TkcApduCommand tkc_apdu_get_version_info = {
+    .ins = TKC_APDU_GET_VERSION_INFO_INS,
+    .p1 = 0x00,
+    .p2 = 0x00,
+    .lc_len = 0,
+    .data = NULL,
+    .le_len = 1,
+    .le = {0x00}};
 
-static TkcApduCommand tkc_apdu_get_form_factor =
-    {.ins = 0x14, .p1 = 0x00, .p2 = 0x00, .lc_len = 0, .data = NULL, .le_len = 1, .le = {0x00}};
+static TkcApduCommand tkc_apdu_get_form_factor = {
+    .ins = TKC_APDU_GET_FORM_FACTOR_INS,
+    .p1 = 0x00,
+    .p2 = 0x00,
+    .lc_len = 0,
+    .data = NULL,
+    .le_len = 1,
+    .le = {0x00}};
 
 #define TKC_APDU_AUTHENTICATION_PUBLIC_KEY_LEN 65
 #define TKC_APDU_AUTHENTICATION_CHALLENGE_LEN  16

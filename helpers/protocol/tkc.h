@@ -13,6 +13,10 @@
 #define TKC_APDU_MIN_LENGTH              (4)
 #define TKC_APDU_RESPONSE_TRAILER_LENGTH (2)
 
+#define TKC_APDU_GET_VERSION_INFO_INS (0x07)
+#define TKC_APDU_GET_PUBLIC_KEY_INS   (0x04)
+#define TKC_APDU_GET_FORM_FACTOR_INS  (0x14)
+
 typedef struct TkcApduCommand {
     uint8_t ins;
     uint8_t p1;

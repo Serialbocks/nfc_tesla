@@ -9,6 +9,8 @@
 #define TAG "NFC_TESLA_nfc_tkc_listener"
 
 #define NFC_TKC_LISTENER_MAX_BUFFER_SIZE 256
+#define NFC_TKC_PUBLIC_KEY_SIZE          64
+#define NFC_TKC_PRIVATE_KEY_SIZE         32
 
 NfcTkcListener* nfc_tkc_listener_alloc(void* appd) {
     NfcTkcListener* instance = malloc(sizeof(NfcTkcListener));
@@ -16,12 +18,17 @@ NfcTkcListener* nfc_tkc_listener_alloc(void* appd) {
     instance->context = app;
     instance->nfc = app->nfc;
     instance->tx_buffer = bit_buffer_alloc(NFC_TKC_LISTENER_MAX_BUFFER_SIZE);
+    instance->public_key = malloc(NFC_TKC_PUBLIC_KEY_SIZE);
+    instance->private_key = malloc(NFC_TKC_PRIVATE_KEY_SIZE);
+    p256_gen_keypair(instance->private_key, instance->public_key);
     return instance;
 }
 
 void nfc_tkc_listener_free(NfcTkcListener* instance) {
     furi_assert(instance);
 
+    free(instance->private_key);
+    free(instance->public_key);
     bit_buffer_free(instance->tx_buffer);
     free(instance);
 }
@@ -56,15 +63,16 @@ static NfcTkcListenerEventType tkc_respond_to_command(
     bool response_required = false;
     if(data[1] == TKC_APDU_PREFIX) {
         uint8_t ins = data[2];
+        bit_buffer_reset(tx_buffer);
+        bit_buffer_append_byte(tx_buffer, data[0]);
         switch(ins) {
-        case 0x14:
+        case TKC_APDU_GET_FORM_FACTOR_INS:
             response_required = true;
-            bit_buffer_reset(tx_buffer);
-
-            bit_buffer_append_byte(tx_buffer, data[0]);
-
             bit_buffer_append_byte(tx_buffer, 0x00);
             bit_buffer_append_byte(tx_buffer, 0x01);
+            break;
+        case TKC_APDU_GET_PUBLIC_KEY_INS:
+            response_required = true;
             break;
         default:
             break;

@@ -4,6 +4,10 @@
 #include <nfc/protocols/iso14443_4a/iso14443_4a_listener.h>
 #include <nfc/helpers/iso14443_crc.h>
 
+#include <mbedtls/3rdparty/p256-m/p256-m/p256-m.h>
+#include <mbedtls/sha1.h>
+#include <mbedtls/aes.h>
+
 typedef enum {
     NfcTkcListenerEventTypeDetected,
     NfcTkcListenerEventTypeNotDetected,
@@ -27,6 +31,8 @@ typedef struct NfcTkcListener {
     const Iso14443_4aData* iso14443_4adata;
 
     BitBuffer* tx_buffer;
+    uint8_t* public_key;
+    uint8_t* private_key;
 
     NfcTkcListenerCallback callback;
     void* context;
