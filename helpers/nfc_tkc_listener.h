@@ -2,6 +2,7 @@
 
 #include <nfc/nfc_listener.h>
 #include <nfc/protocols/iso14443_4a/iso14443_4a_listener.h>
+#include <nfc/protocols/iso14443_3a/iso14443_3a_listener_i.h>
 
 typedef enum {
     NfcTkcListenerEventTypeDetected,
@@ -23,6 +24,8 @@ typedef struct NfcTkcListener {
     Nfc* nfc;
     NfcListener* listener;
     const Iso14443_4aData* iso14443_4adata;
+
+    BitBuffer* tx_buffer;
 
     NfcTkcListenerCallback callback;
     void* context;

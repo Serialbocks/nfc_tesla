@@ -8,47 +8,65 @@
 
 #define TAG "NFC_TESLA_nfc_tkc_listener"
 
+#define NFC_TKC_LISTENER_MAX_BUFFER_SIZE 256
+
 NfcTkcListener* nfc_tkc_listener_alloc(void* appd) {
     NfcTkcListener* instance = malloc(sizeof(NfcTkcListener));
     NfcTeslaApp* app = appd;
     instance->context = app;
     instance->nfc = app->nfc;
+    instance->tx_buffer = bit_buffer_alloc(NFC_TKC_LISTENER_MAX_BUFFER_SIZE);
     return instance;
 }
 
 void nfc_tkc_listener_free(NfcTkcListener* instance) {
     furi_assert(instance);
 
+    bit_buffer_free(instance->tx_buffer);
     free(instance);
 }
 
-static NfcCommand tkc_listener_start_callback(NfcGenericEvent event, void* contextd) {
-    NfcTkcListener* instance = contextd;
-    NfcTkcListenerEvent result = {.type = NfcTkcListenerEventTypeNotDetected};
-    Iso14443_4aListenerEvent* iso14443_event = event.event_data;
+static NfcTkcListenerEventType tkc_respond_to_command(
+    NfcTkcListener* instance,
+    Iso14443_3aListener* iso14443_listener,
+    BitBuffer* rx_buffer,
+    Iso14443_4aListenerEvent* iso14443_event) {
+    UNUSED(instance);
+    UNUSED(iso14443_listener);
 
-    size_t data_size_bits = bit_buffer_get_size(iso14443_event->data->buffer);
+    const uint8_t* data = bit_buffer_get_data(rx_buffer);
+    size_t data_size_bits = bit_buffer_get_size(rx_buffer);
     size_t data_size_bytes = data_size_bits / 8;
 
     if(data_size_bits == 0) {
-        FURI_LOG_D(TAG, "tkc_listener_start_callback() No data received!");
-        return NfcCommandContinue;
+        FURI_LOG_D(TAG, "tkc_respond_to_command() No data received!");
+        return NfcTkcListenerEventTypeNotDetected;
     }
 
-    const uint8_t* data = bit_buffer_get_data(iso14443_event->data->buffer);
-
-    FURI_LOG_D(TAG, "tkc_listener_start_callback() event_type: %d", iso14443_event->type);
+    // Debug print data received
+    FURI_LOG_D(TAG, "tkc_respond_to_command() event_type: %d", iso14443_event->type);
     FURI_LOG_D(TAG, "data size: %d bits (%d bytes)", data_size_bits, data_size_bytes);
     FuriString* debug_text = furi_string_alloc();
     furi_string_cat_printf(debug_text, "0x");
     for(uint8_t i = 0; i < data_size_bytes; i++) {
         furi_string_cat_printf(debug_text, "%02x", data[i]);
     }
-
     FURI_LOG_D(TAG, furi_string_get_cstr(debug_text));
     furi_string_free(debug_text);
 
+    return NfcTkcListenerEventTypeDetected;
+}
+
+static NfcCommand tkc_listener_start_callback(NfcGenericEvent event, void* contextd) {
+    NfcTkcListener* instance = contextd;
+    Iso14443_4aListenerEvent* iso14443_event = event.event_data;
+    Iso14443_3aListener* iso14443_listener = event.instance;
+    NfcTkcListenerEvent result;
+
+    result.type = tkc_respond_to_command(
+        instance, iso14443_listener, iso14443_event->data->buffer, iso14443_event);
     instance->callback(result, instance->context);
+
     return NfcCommandContinue;
 }
 
