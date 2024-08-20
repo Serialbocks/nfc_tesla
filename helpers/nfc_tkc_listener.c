@@ -76,7 +76,17 @@ static NfcTkcListenerEventType tkc_respond_to_command(
             bit_buffer_append_byte(tx_buffer, 0x04);
             bit_buffer_append_bytes(tx_buffer, instance->public_key, NFC_TKC_PUBLIC_KEY_SIZE);
             break;
+        case TKC_APDU_GET_VERSION_INFO_INS:
+            response_required = true;
+            bit_buffer_append_byte(tx_buffer, 0x00);
+            bit_buffer_append_byte(tx_buffer, 0x02);
+            bit_buffer_append_byte(tx_buffer, 0x00);
+            bit_buffer_append_byte(tx_buffer, 0x02);
+            bit_buffer_append_byte(tx_buffer, 0x00);
+            bit_buffer_append_byte(tx_buffer, 0x02);
+            break;
         default:
+            FURI_LOG_D(TAG, "received unimplemented INS: 0x%02x", data[2]);
             break;
         }
     }
