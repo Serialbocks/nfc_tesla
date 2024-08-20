@@ -20,6 +20,7 @@ NfcTkcListener* nfc_tkc_listener_alloc(void* appd) {
     instance->tx_buffer = bit_buffer_alloc(NFC_TKC_LISTENER_MAX_BUFFER_SIZE);
     instance->public_key = malloc(NFC_TKC_PUBLIC_KEY_SIZE);
     instance->private_key = malloc(NFC_TKC_PRIVATE_KEY_SIZE);
+    instance->shared_secret = NULL;
     p256_gen_keypair(instance->private_key, instance->public_key);
     return instance;
 }
@@ -29,6 +30,9 @@ void nfc_tkc_listener_free(NfcTkcListener* instance) {
 
     free(instance->private_key);
     free(instance->public_key);
+    if(instance->shared_secret != NULL) {
+        free(instance->shared_secret);
+    }
     bit_buffer_free(instance->tx_buffer);
     free(instance);
 }
@@ -84,6 +88,39 @@ static NfcTkcListenerEventType tkc_respond_to_command(
             bit_buffer_append_byte(tx_buffer, 0x02);
             bit_buffer_append_byte(tx_buffer, 0x00);
             bit_buffer_append_byte(tx_buffer, 0x02);
+            break;
+        case TCK_APDU_AUTHENTICATION_CHALLENGE_INS:
+            response_required = true;
+            {
+                const uint8_t* car_public_key = &(data[7]);
+                const uint8_t* challenge = &(data[71]);
+
+                // Calculate ECDH shared secret
+                if(instance->shared_secret == NULL) {
+                    instance->shared_secret = malloc(32 * sizeof(uint8_t));
+                    int ecdh_result = p256_ecdh_shared_secret(
+                        instance->shared_secret, instance->private_key, car_public_key);
+                    if(ecdh_result != 0) {
+                        FURI_LOG_W(TAG, "failure to calculate shared secret: %u", ecdh_result);
+                        return NfcTkcListenerEventTypeError;
+                    }
+                }
+
+                // Calculate the key from the sha1 of the shared key
+                uint8_t sha1[20];
+                mbedtls_sha1(instance->shared_secret, 32, sha1);
+
+                // Encrypt the challenge using the sha1 key
+                uint8_t auth_response[TKC_AUTHENTICATION_RESPONSE_SIZE];
+                mbedtls_aes_context aes_context;
+                mbedtls_aes_init(&aes_context);
+                mbedtls_aes_setkey_dec(&aes_context, sha1, 128);
+                mbedtls_aes_crypt_ecb(&aes_context, MBEDTLS_AES_ENCRYPT, challenge, auth_response);
+                mbedtls_aes_free(&aes_context);
+
+                bit_buffer_append_bytes(
+                    tx_buffer, auth_response, TKC_AUTHENTICATION_RESPONSE_SIZE);
+            }
             break;
         default:
             FURI_LOG_D(TAG, "received unimplemented INS: 0x%02x", data[2]);

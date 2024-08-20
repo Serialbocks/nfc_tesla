@@ -33,6 +33,7 @@ typedef struct NfcTkcListener {
     BitBuffer* tx_buffer;
     uint8_t* public_key;
     uint8_t* private_key;
+    uint8_t* shared_secret;
 
     NfcTkcListenerCallback callback;
     void* context;
