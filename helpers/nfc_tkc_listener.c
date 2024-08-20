@@ -95,6 +95,12 @@ static NfcTkcListenerEventType tkc_respond_to_command(
                 const uint8_t* car_public_key = &(data[7]);
                 const uint8_t* challenge = &(data[71]);
 
+                FURI_LOG_D(
+                    TAG,
+                    "car_public_key[0]: 0x%02x challenge[0]: 0x%02x",
+                    car_public_key[0],
+                    challenge[0]);
+
                 // Calculate ECDH shared secret
                 if(instance->shared_secret == NULL) {
                     instance->shared_secret = malloc(32 * sizeof(uint8_t));
@@ -112,9 +118,10 @@ static NfcTkcListenerEventType tkc_respond_to_command(
 
                 // Encrypt the challenge using the sha1 key
                 uint8_t auth_response[TKC_AUTHENTICATION_RESPONSE_SIZE];
+                auth_response[0] = 0x04;
                 mbedtls_aes_context aes_context;
                 mbedtls_aes_init(&aes_context);
-                mbedtls_aes_setkey_dec(&aes_context, sha1, 128);
+                mbedtls_aes_setkey_enc(&aes_context, sha1, 128);
                 mbedtls_aes_crypt_ecb(&aes_context, MBEDTLS_AES_ENCRYPT, challenge, auth_response);
                 mbedtls_aes_free(&aes_context);
 

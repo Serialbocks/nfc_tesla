@@ -67,6 +67,8 @@ typedef struct {
     BitBuffer* rx_buffer;
     FuriThreadId thread_id;
     TkcPollerError error;
+    uint8_t* public_key;
+    uint8_t* private_key;
 } TkcPollerDetectContext;
 
 static TkcPollerError tkc_send_apdu_command(
@@ -200,17 +202,16 @@ NfcCommand tkc_poller_detect_callback(NfcGenericEvent event, void* context) {
                 TKC_VERSION_INFO_SIZE);
 
             // perform authentication challenge
-            uint8_t private_key[32];
             // First 64 bytes is the public key
             uint8_t auth_challenge_data[TKC_APDU_AUTHENTICATION_DATA_LEN];
             auth_challenge_data[0] = 0x04;
-            p256_gen_keypair(private_key, &(auth_challenge_data[1]));
+            memcpy(&(auth_challenge_data[1]), tkc_poller_detect_ctx->public_key, 64);
 
             // Calculate ECDH shared secret
             uint8_t shared_secret[32];
             int ecdh_result = p256_ecdh_shared_secret(
                 shared_secret,
-                private_key,
+                tkc_poller_detect_ctx->private_key,
                 tkc_poller_detect_ctx->tkc_data->public_key.data_parsed.public_key);
             if(ecdh_result != 0) {
                 tkc_poller_detect_ctx->error = TkcPollerErrorProtocol;
@@ -295,6 +296,9 @@ TkcPollerError tkc_poller_detect(Nfc* nfc, Tkc* tkc_data) {
     tkc_poller_detect_ctx.tkc_data = tkc_data;
     tkc_poller_detect_ctx.thread_id = furi_thread_get_current_id();
     tkc_poller_detect_ctx.error = TkcPollerErrorNone;
+    tkc_poller_detect_ctx.public_key = malloc(64 * sizeof(uint8_t));
+    tkc_poller_detect_ctx.private_key = malloc(32 * sizeof(uint8_t));
+    p256_gen_keypair(tkc_poller_detect_ctx.private_key, tkc_poller_detect_ctx.public_key);
 
     nfc_poller_start(
         tkc_poller_detect_ctx.poller, tkc_poller_detect_callback, &tkc_poller_detect_ctx);
@@ -308,6 +312,8 @@ TkcPollerError tkc_poller_detect(Nfc* nfc, Tkc* tkc_data) {
     nfc_poller_free(tkc_poller_detect_ctx.poller);
     bit_buffer_free(tkc_poller_detect_ctx.tx_buffer);
     bit_buffer_free(tkc_poller_detect_ctx.rx_buffer);
+    free(tkc_poller_detect_ctx.public_key);
+    free(tkc_poller_detect_ctx.private_key);
 
     return tkc_poller_detect_ctx.error;
 }
